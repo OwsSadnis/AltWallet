@@ -1,6 +1,6 @@
 // AltWallet — shared data constants
 
-export const LOGO_URL = "/manus-storage/LogoAltWallet_trimmed_ae66b274.png";
+export const LOGO_URL = "/logo-altwallet.png";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const HERO_ORB_URL = "/manus-storage/hero-orb_ca496551.png";
 

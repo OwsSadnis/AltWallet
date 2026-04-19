@@ -400,10 +400,9 @@ body {
   padding: 0 28px;
   border-right: 1px solid var(--border-default);
   min-width: 0;
-  overflow: hidden;
 }
 .aw-stat:first-child { padding-left: 0; }
-.aw-stat:last-child { padding-right: 0; border-right: none; }
+.aw-stat:last-child { padding-right: 20px; border-right: none; }
 .aw-stat-num {
   font-size: clamp(22px, 2.4vw, 30px);
   font-weight: 700;
@@ -413,7 +412,7 @@ body {
   line-height: 1.05;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: clip;
+  text-overflow: ellipsis;
 }
 .aw-stat-lbl { font-size: 12px; color: var(--fg-tertiary); margin-top: 6px; }
 
@@ -957,6 +956,13 @@ body {
   100% { transform: scale(1.7); opacity: 0; }
 }
 
+/* Wallet input bar CTA button — force vertical centering */
+.aw-wallet-bar-cta {
+  align-self: center !important;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
 /* 3D tilt utility */
 .aw-tilt { transform-style: preserve-3d; transition: transform 200ms var(--ease-out); will-change: transform; }
 
@@ -970,12 +976,16 @@ body {
   color: var(--fg-secondary); font-size: 13px; line-height: 1.55;
 }
 .aw-banner.aw-banner-center {
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
+  gap: 10px;
+  padding: 20px;
 }
 .aw-banner.aw-banner-center > div:not(.aw-banner-icon) {
   flex: 0 1 auto;
+  text-align: center;
 }
 .aw-banner.aw-banner-warn {
   background: rgba(244, 196, 48, 0.04);
@@ -1266,20 +1276,32 @@ button { -webkit-tap-highlight-color: transparent; }
   align-items: center;
   gap: 10px;
   margin-top: 14px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.aw-examples-scroll::-webkit-scrollbar { display: none; }
+.aw-examples-label {
+  flex-shrink: 0;
 }
 .aw-examples-row {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 @media (max-width: 640px) {
   .aw-examples-scroll {
-    display: block;
+    flex-direction: column;
+    align-items: flex-start;
+    flex-wrap: nowrap;
   }
   .aw-examples-scroll .aw-examples-label {
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
   }
   .aw-examples-row {
     flex-wrap: nowrap;
@@ -1291,6 +1313,7 @@ button { -webkit-tap-highlight-color: transparent; }
     padding-right: 20px;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    width: calc(100% + 40px);
   }
   .aw-examples-row::-webkit-scrollbar { display: none; }
   .aw-examples-row .aw-example {
