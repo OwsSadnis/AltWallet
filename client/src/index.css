@@ -1389,20 +1389,19 @@ button { -webkit-tap-highlight-color: transparent; }
 
 /* ---- Navbar / mobile drawer polish ---- */
 .aw-nav-logo-img {
-  height: 32px;
+  height: 75px;
   width: auto;
   display: block;
   object-fit: contain;
-  max-width: 260px;
+  max-width: 550px;
   flex-shrink: 0;
 }
 @media (max-width: 768px) {
-  .aw-nav-logo-img { height: 28px; max-width: 200px; }
+  .aw-nav-logo-img { height: 30px; max-width: 150px; }
 }
 @media (max-width: 480px) {
-  .aw-nav-logo-img { height: 24px; max-width: 170px; }
+  .aw-nav-logo-img { height: 26px; max-width: 130px; }
 }
-
 /* Hamburger drawer animation improvements */
 .aw-drawer {
   position: fixed;

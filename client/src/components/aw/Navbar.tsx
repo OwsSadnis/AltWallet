@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Globe, Menu, X, Check, ArrowRight } from "lucide-react";
 import { Logo } from "./Logo";
-import { Button } from "./Primitives";
 import { cn } from "@/lib/utils";
 import { useI18n, LANGS, LangCode } from "@/i18n";
 
@@ -118,15 +117,11 @@ export function Navbar() {
                 )}
               </div>
 
-              <Link href="/redeem" className="hidden md:inline-flex">
-                <Button variant="ghost" size="sm">
-                  {t("nav.signin")}
-                </Button>
+              <Link href="/redeem" className="aw-btn aw-btn-ghost aw-btn-sm hidden md:inline-flex">
+                {t("nav.signin")}
               </Link>
-              <Link href="/checker" className="hidden md:inline-flex">
-                <Button variant="primary" size="sm">
-                  {t("nav.get_started")}
-                </Button>
+              <Link href="/checker" className="aw-btn aw-btn-primary aw-btn-sm hidden md:inline-flex">
+                {t("nav.get_started")}
               </Link>
 
               <button
@@ -204,20 +199,20 @@ export function Navbar() {
             </div>
 
             <div className="aw-drawer-footer">
-              <Link href="/checker" onClick={() => setDrawerOpen(false)}>
-                <Button
-                  variant="primary"
-                  size="lg"
-                  className="w-full"
-                  trailingIcon={ArrowRight}
-                >
-                  {t("nav.get_started")}
-                </Button>
+              <Link
+                href="/checker"
+                onClick={() => setDrawerOpen(false)}
+                className="aw-btn aw-btn-primary aw-btn-lg w-full"
+              >
+                {t("nav.get_started")}
+                <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link href="/redeem" onClick={() => setDrawerOpen(false)}>
-                <Button variant="secondary" size="lg" className="w-full">
-                  {t("nav.signin")}
-                </Button>
+              <Link
+                href="/redeem"
+                onClick={() => setDrawerOpen(false)}
+                className="aw-btn aw-btn-secondary aw-btn-lg w-full"
+              >
+                {t("nav.signin")}
               </Link>
             </div>
           </div>

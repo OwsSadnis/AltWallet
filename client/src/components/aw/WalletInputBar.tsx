@@ -184,12 +184,12 @@ export function WalletInputBar({
               aria-selected={chain === c.code}
             >
               <ChainLogo code={c.code} size={20} />
-              <span className="text-white text-[13px] font-medium">{c.name}</span>
+              <span className="text-white text-[13px] font-medium flex-1">{c.name}</span>
               <span className="text-[11px] text-[color:var(--fg-tertiary)] mono">
                 {c.code}
               </span>
               {c.beta && (
-                <Chip tone="beta" className="ml-auto">
+                <Chip tone="beta">
                   {t("common.beta")}
                 </Chip>
               )}

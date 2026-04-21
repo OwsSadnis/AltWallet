@@ -37,7 +37,7 @@ export default function Redeem() {
     <div className="container" style={{ paddingTop: 72, paddingBottom: 120 }}>
       <div className="mx-auto max-w-[520px] flex flex-col items-center gap-8">
         <Reveal>
-          <LogoImage height={44} />
+          <LogoImage height={240} />
         </Reveal>
 
         <Reveal delay={80} className="w-full">
