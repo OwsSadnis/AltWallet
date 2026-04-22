@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(git checkout *)",
-      "Bash(pnpm build *)"
+      "Bash(pnpm build *)",
+      "Bash(pnpm check *)"
     ]
   }
 }

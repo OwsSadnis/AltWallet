@@ -10,6 +10,7 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import path from "path";
 import { fileURLToPath } from "url";
+import { clerkWebhookRouter } from "./routes/clerkWebhook.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -64,10 +65,6 @@ app.use(
   })
 );
 
-// ─── BODY PARSER ─────────────────────────────────────────────────────────────
-app.use(express.json({ limit: "10kb" })); // limit body size
-app.use(express.urlencoded({ extended: false, limit: "10kb" }));
-
 // ─── RATE LIMITING ────────────────────────────────────────────────────────────
 // Global API limiter
 const apiLimiter = rateLimit({
@@ -98,16 +95,19 @@ const webhookLimiter = rateLimit({
 
 app.use("/api/", apiLimiter);
 app.use("/api/scan", scanLimiter);
-app.use("/api/webhook", webhookLimiter);
+app.use("/api/webhooks", webhookLimiter);
 
-// ─── ROUTES ───────────────────────────────────────────────────────────────────
-// Import your route files here as you build them:
+// ─── WEBHOOK ROUTES (before express.json — raw body needed for HMAC verification)
+app.use("/api/webhooks", clerkWebhookRouter);
+
+// ─── BODY PARSER (after webhook routes so they receive raw body) ──────────────
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: false, limit: "10kb" }));
+
+// ─── API ROUTES ───────────────────────────────────────────────────────────────
 // import { scanRouter } from "./routes/scan.js";
-// import { webhookRouter } from "./routes/webhook.js";
 // import { adminRouter } from "./routes/admin.js";
-//
 // app.use("/api/scan", scanRouter);
-// app.use("/api/webhook", webhookRouter);
 // app.use("/api/admin", adminRouter);
 
 // Health check — no auth needed

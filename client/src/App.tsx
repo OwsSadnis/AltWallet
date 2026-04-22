@@ -8,11 +8,13 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { Shell } from "./components/aw/Shell";
+import { ProtectedRoute } from "./components/aw/ProtectedRoute";
 import { I18nProvider } from "./i18n";
 import Landing from "./pages/Landing";
 import Checker from "./pages/Checker";
 import Pricing from "./pages/Pricing";
 import Redeem from "./pages/Redeem";
+import SignIn from "./pages/SignIn";
 import Dashboard from "./pages/Dashboard";
 import Flagged from "./pages/Flagged";
 import Admin from "./pages/Admin";
@@ -27,10 +29,27 @@ function Router() {
         <Route path="/checker" component={Checker} />
         <Route path="/pricing" component={Pricing} />
         <Route path="/redeem" component={Redeem} />
-        <Route path="/dashboard" component={Dashboard} />
-        <Route path="/portfolio" component={Portfolio} />
-        <Route path="/flagged" component={Flagged} />
-        <Route path="/admin" component={Admin} />
+        <Route path="/sign-in" component={SignIn} />
+        <Route path="/dashboard">
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/portfolio">
+          <ProtectedRoute>
+            <Portfolio />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/flagged">
+          <ProtectedRoute>
+            <Flagged />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin">
+          <ProtectedRoute>
+            <Admin />
+          </ProtectedRoute>
+        </Route>
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/404" component={NotFound} />
