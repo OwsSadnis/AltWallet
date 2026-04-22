@@ -10,7 +10,10 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import path from "path";
 import { fileURLToPath } from "url";
+import { clerkMiddleware } from "./middleware/auth.js";
 import { clerkWebhookRouter } from "./routes/clerkWebhook.js";
+import { whopWebhookRouter } from "./routes/whopWebhook.js";
+import { redeemRouter } from "./routes/redeem.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -41,7 +44,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
+        scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
         styleSrc: ["'self'", "'unsafe-inline'"], // needed for Tailwind
         imgSrc: ["'self'", "data:", "https:"],
         connectSrc: [
@@ -52,9 +55,10 @@ app.use(
           "https://api.tronscan.org",
           "https://pro-api.coinmarketcap.com",
           "https://api.anthropic.com",
+          "https://challenges.cloudflare.com",
         ],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        frameSrc: ["'none'"],
+        frameSrc: ["https://challenges.cloudflare.com"],
         objectSrc: ["'none'"],
       },
     },
@@ -99,12 +103,17 @@ app.use("/api/webhooks", webhookLimiter);
 
 // ─── WEBHOOK ROUTES (before express.json — raw body needed for HMAC verification)
 app.use("/api/webhooks", clerkWebhookRouter);
+app.use("/api/webhooks", whopWebhookRouter);
 
 // ─── BODY PARSER (after webhook routes so they receive raw body) ──────────────
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 
+// ─── CLERK MIDDLEWARE (after body parsers, before protected routes) ───────────
+app.use(clerkMiddleware());
+
 // ─── API ROUTES ───────────────────────────────────────────────────────────────
+app.use("/api/redeem", redeemRouter);
 // import { scanRouter } from "./routes/scan.js";
 // import { adminRouter } from "./routes/admin.js";
 // app.use("/api/scan", scanRouter);

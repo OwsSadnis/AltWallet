@@ -1,10 +1,31 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@clerk/clerk-react";
 import { Button, Eyebrow, Chip } from "@/components/aw/Primitives";
 import { Reveal } from "@/components/aw/motion";
 import { LogoImage } from "@/components/aw/Logo";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ArrowRight, KeyRound, CheckCircle2, AlertCircle } from "lucide-react";
 import { useT } from "@/i18n";
+
+// Cloudflare Turnstile global injected by the script in index.html
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        container: HTMLElement,
+        params: {
+          sitekey: string;
+          callback: (token: string) => void;
+          "expired-callback": () => void;
+          "error-callback": () => void;
+          theme?: "dark" | "light" | "auto";
+        }
+      ) => string;
+      reset: (widgetId: string) => void;
+      remove: (widgetId: string) => void;
+    };
+  }
+}
 
 type State =
   | { kind: "idle" }
@@ -14,24 +35,139 @@ type State =
 
 export default function Redeem() {
   const t = useT();
+  const { isSignedIn, getToken } = useAuth();
+  const [, navigate] = useLocation();
+
   const [token, setToken] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
+  const [turnstileToken, setTurnstileToken] = useState("");
 
-  const submit = () => {
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
+
+  // ─── Render Turnstile widget ────────────────────────────────────────────────
+  useEffect(() => {
+    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as
+      | string
+      | undefined;
+    if (!siteKey || !turnstileContainerRef.current) return;
+
+    const renderWidget = () => {
+      if (!window.turnstile || !turnstileContainerRef.current) return;
+      if (widgetIdRef.current) return; // already rendered
+
+      widgetIdRef.current = window.turnstile.render(
+        turnstileContainerRef.current,
+        {
+          sitekey: siteKey,
+          theme: "dark",
+          callback: (t) => setTurnstileToken(t),
+          "expired-callback": () => setTurnstileToken(""),
+          "error-callback": () => setTurnstileToken(""),
+        }
+      );
+    };
+
+    if (window.turnstile) {
+      renderWidget();
+    } else {
+      // Script loads async — wait for it
+      const script = document.querySelector<HTMLScriptElement>(
+        'script[src*="turnstile"]'
+      );
+      script?.addEventListener("load", renderWidget);
+      return () => script?.removeEventListener("load", renderWidget);
+    }
+
+    return () => {
+      if (widgetIdRef.current) {
+        window.turnstile?.remove(widgetIdRef.current);
+        widgetIdRef.current = null;
+      }
+    };
+  }, []);
+
+  // ─── Reset Turnstile after error ────────────────────────────────────────────
+  const resetCaptcha = () => {
+    if (widgetIdRef.current) {
+      window.turnstile?.reset(widgetIdRef.current);
+      setTurnstileToken("");
+    }
+  };
+
+  // ─── Submit ─────────────────────────────────────────────────────────────────
+  const submit = async () => {
     if (!token.trim()) return;
+
+    if (!isSignedIn) {
+      navigate("/sign-in");
+      return;
+    }
+
+    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as
+      | string
+      | undefined;
+    if (siteKey && !turnstileToken) {
+      setState({
+        kind: "error",
+        message: "Please complete the CAPTCHA challenge.",
+      });
+      return;
+    }
+
     setState({ kind: "loading" });
-    setTimeout(() => {
-      const upper = token.toUpperCase();
-      if (upper.includes("USED")) {
-        setState({ kind: "error", message: t("redeem.err_used") });
+
+    try {
+      const sessionToken = await getToken();
+
+      const res = await fetch("/api/redeem", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(sessionToken
+            ? { Authorization: `Bearer ${sessionToken}` }
+            : {}),
+        },
+        body: JSON.stringify({
+          token: token.trim().toUpperCase(),
+          turnstileToken,
+        }),
+      });
+
+      const data = (await res.json()) as {
+        success?: boolean;
+        plan?: string;
+        error?: string;
+      };
+
+      if (!res.ok || !data.success) {
+        setState({
+          kind: "error",
+          message: data.error ?? t("redeem.err_used"),
+        });
+        resetCaptcha();
         return;
       }
-      const plan = upper.includes("BIZ") || upper.includes("BUSINESS")
-        ? "Business"
-        : "Pro";
-      setState({ kind: "success", plan });
-    }, 900);
+
+      const planLabel =
+        data.plan === "business"
+          ? "Business"
+          : data.plan === "pro"
+            ? "Pro"
+            : (data.plan ?? "Pro");
+
+      setState({ kind: "success", plan: planLabel });
+    } catch {
+      setState({
+        kind: "error",
+        message: "Network error. Please try again.",
+      });
+      resetCaptcha();
+    }
   };
+
+  const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+  const captchaReady = !siteKey || !!turnstileToken;
 
   return (
     <div className="container" style={{ paddingTop: 72, paddingBottom: 120 }}>
@@ -83,12 +219,19 @@ export default function Redeem() {
                     {t("redeem.hint")}
                   </div>
 
+                  {/* Cloudflare Turnstile widget */}
+                  {siteKey && (
+                    <div className="flex justify-center mt-1">
+                      <div ref={turnstileContainerRef} />
+                    </div>
+                  )}
+
                   {state.kind === "error" && (
                     <div
                       className="flex items-center gap-2 text-[13px] mt-1"
                       style={{ color: "var(--risk-high)" }}
                     >
-                      <AlertCircle className="w-4 h-4" />
+                      <AlertCircle className="w-4 h-4 shrink-0" />
                       {state.message}
                     </div>
                   )}
@@ -97,12 +240,30 @@ export default function Redeem() {
                     variant="primary"
                     size="lg"
                     onClick={submit}
-                    disabled={state.kind === "loading" || !token.trim()}
+                    disabled={
+                      state.kind === "loading" ||
+                      !token.trim() ||
+                      !captchaReady
+                    }
                     trailingIcon={ArrowRight}
                     className="mt-2"
                   >
-                    {state.kind === "loading" ? t("common.activating") : t("common.activate")}
+                    {state.kind === "loading"
+                      ? t("common.activating")
+                      : t("common.activate")}
                   </Button>
+
+                  {!isSignedIn && (
+                    <p className="text-center text-[12px] text-[color:var(--fg-tertiary)] mt-1">
+                      <Link
+                        href="/sign-in"
+                        className="text-[color:var(--accent)] hover:underline"
+                      >
+                        Sign in
+                      </Link>{" "}
+                      to activate your plan.
+                    </p>
+                  )}
 
                   <div className="text-center mt-2 text-[12px] text-[color:var(--fg-tertiary)]">
                     {t("redeem.no_key")}{" "}
@@ -133,11 +294,17 @@ export default function Redeem() {
                   {t("redeem.welcome", { plan: state.plan })}
                 </h2>
                 <p className="text-[14px] text-[color:var(--fg-secondary)] max-w-sm leading-relaxed">
-                  {state.plan === "Business" ? t("redeem.welcome_d_biz") : t("redeem.welcome_d_pro")}
+                  {state.plan === "Business"
+                    ? t("redeem.welcome_d_biz")
+                    : t("redeem.welcome_d_pro")}
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <Link href="/checker">
-                    <Button variant="primary" size="md" trailingIcon={ArrowRight}>
+                    <Button
+                      variant="primary"
+                      size="md"
+                      trailingIcon={ArrowRight}
+                    >
                       {t("redeem.run_first")}
                     </Button>
                   </Link>
