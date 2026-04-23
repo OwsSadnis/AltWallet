@@ -3,7 +3,9 @@
     "allow": [
       "Bash(git checkout *)",
       "Bash(pnpm build *)",
-      "Bash(pnpm check *)"
+      "Bash(pnpm check *)",
+      "Bash(grep -E \"\\(shared|types\\)$\")",
+      "Bash(npx tsc *)"
     ]
   }
 }

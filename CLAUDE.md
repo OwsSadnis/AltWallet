@@ -31,7 +31,7 @@ AltWallet (altwallet.id) adalah crypto wallet checker + portfolio tool. Target: 
 - **Claude Haiku** — AI summary di hasil scan
 
 ### Infra
-- **Deploy**: Vercel Hobby
+- **Deploy**: Vercel Hobby (alt-wallet.vercel.app)
 - **Domain**: altwallet.id (Cloudflare)
 - **Security**: Cloudflare Turnstile (CAPTCHA)
 
@@ -51,6 +51,7 @@ C:\AltWallet\altwallet\
 │   ├── routes/
 │   ├── middleware/
 │   └── index.ts
+├── api/             # Vercel serverless entry point
 ├── shared/          # Shared types
 ├── .env             # Local env (never commit)
 └── package.json
@@ -60,10 +61,10 @@ C:\AltWallet\altwallet\
 
 ## Critical Rules — BACA SEBELUM EDIT APAPUN
 
-1. **JANGAN modifikasi**: `Shell`, `ThemeProvider`, `I18nProvider` — ini sudah di-setup Manus, jangan disentuh
+1. **JANGAN modifikasi**: `Shell`, `ThemeProvider`, `I18nProvider` — jangan disentuh
 2. **Router**: Gunakan `wouter`, bukan `react-router-dom`
 3. **Clerk SignIn**: Pakai hash routing — `<SignIn routing="hash" fallbackRedirectUrl="/redeem" />`
-4. **ProtectedRoute**: Via `useAuth()` dari Clerk
+4. **ProtectedRoute**: Via `useAuth()` dari Clerk — sudah ada di `client/src/components/aw/ProtectedRoute.tsx`
 5. **Supabase RLS**: Selalu aktif — setiap query harus pakai authenticated client
 6. **Environment variables**: Client-side pakai prefix `VITE_`, server-side tanpa prefix
 7. **Jangan install package baru** tanpa explicit request
@@ -92,7 +93,7 @@ if (!isSignedIn) return <Redirect to="/sign-in" />
 - `/dashboard` — requires auth
 - `/portfolio` — requires auth
 - `/flagged` — requires auth
-- `/admin` — requires auth + admin role check
+- `/admin` — requires auth + admin role check (Clerk publicMetadata.role === 'admin')
 
 ---
 
@@ -100,40 +101,42 @@ if (!isSignedIn) return <Redirect to="/sign-in" />
 
 ```
 Whop payment success
-  → webhook POST /api/whop/webhook
-  → verify Whop signature
-  → insert into Supabase `tokens` table (token: BETA-AW-XXX, plan, email, used: false)
-  → Resend email → buyer (token delivery)
+  → webhook POST /api/webhooks/whop
+  → verify Whop HMAC-SHA256 signature
+  → generate token BETA-AW-XXXXXX
+  → insert into Supabase `tokens` table
+  → Resend email → buyer (template: altwallet-pro-token / altwallet-business-token)
 
 User redeem:
-  POST /api/redeem { token, userId }
+  POST /api/redeem { token }
+  → Turnstile verify
   → validate token exists + !used
-  → mark token as used
+  → mark token used
   → update Clerk publicMetadata: { plan: "pro" | "business" }
-  → return success
+  → return { success, plan }
 ```
 
 ---
 
-## Supabase Schema (Target)
+## Supabase Schema (Sudah dibuat)
 
 ```sql
--- Tokens table
+-- tokens
 CREATE TABLE tokens (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  token TEXT UNIQUE NOT NULL,         -- format: BETA-AW-XXX
-  plan TEXT NOT NULL,                  -- 'free' | 'pro' | 'business'
+  token TEXT UNIQUE NOT NULL,
+  plan TEXT NOT NULL,
   email TEXT,
   used BOOLEAN DEFAULT false,
-  used_by TEXT,                        -- clerk user_id
+  used_by TEXT,
   used_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Wallets scanned (history)
+-- wallet_scans
 CREATE TABLE wallet_scans (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id TEXT NOT NULL,               -- clerk user_id
+  user_id TEXT NOT NULL,
   address TEXT NOT NULL,
   chain TEXT NOT NULL,
   risk_score INTEGER,
@@ -141,10 +144,25 @@ CREATE TABLE wallet_scans (
   scanned_at TIMESTAMPTZ DEFAULT now()
 );
 
--- RLS: users only see their own data
-ALTER TABLE wallet_scans ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "users_own_scans" ON wallet_scans
-  FOR ALL USING (user_id = auth.uid()::text);
+-- profiles
+CREATE TABLE profiles (
+  id TEXT PRIMARY KEY,
+  email TEXT,
+  name TEXT,
+  plan TEXT DEFAULT 'free',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- team_members (belum dibuat — Phase 5)
+CREATE TABLE team_members (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  owner_id TEXT NOT NULL,
+  member_id TEXT,
+  member_email TEXT NOT NULL,
+  invited_at TIMESTAMPTZ DEFAULT now(),
+  joined_at TIMESTAMPTZ
+);
 ```
 
 ---
@@ -161,13 +179,10 @@ CREATE POLICY "users_own_scans" ON wallet_scans
 | XRP | GoPlus | Active |
 | SUI | GoPlus | Beta |
 
-### Risk Score (0–100)
-- 0–30: Low risk (green)
-- 31–69: Medium risk (yellow)
-- 70–100: High risk (red)
-
-### AI Summary
-Setelah scan selesai, POST ke Claude Haiku API dengan hasil scan → generate plain language summary (max 150 kata, bahasa sesuai i18n user).
+### Risk Score (0-100)
+- 0-30: Low risk (green)
+- 31-69: Medium risk (yellow)
+- 70-100: High risk (red)
 
 ---
 
@@ -177,10 +192,10 @@ Setelah scan selesai, POST ke Claude Haiku API dengan hasil scan → generate pl
 |---------|------|-----|----------|
 | Wallet scans/day | 3 | Unlimited | Unlimited |
 | Chains | ETH, BTC | All 6 | All 6 |
-| AI Summary | ✗ | ✓ | ✓ |
-| PDF/CSV Export | ✗ | ✓ | ✓ |
+| AI Summary | x | v | v |
+| PDF/CSV Export | x | v | v |
 | Transaction history | — | 30 days | 90 days |
-| Team seats | 1 | 1 | Up to 5 |
+| Team seats | 1 | 1 | Up to 3 |
 | Support | Email | Priority Email | Priority Email |
 
 ---
@@ -196,50 +211,62 @@ VITE_TURNSTILE_SITE_KEY=
 
 # Server-side
 CLERK_SECRET_KEY=
+CLERK_WEBHOOK_SECRET=
 SUPABASE_SERVICE_ROLE_KEY=
 WHOP_WEBHOOK_SECRET=
 WHOP_API_KEY=
+WHOP_PRO_PLAN_ID=
+WHOP_BUSINESS_PLAN_ID=
 RESEND_API_KEY=
 ANTHROPIC_API_KEY=
 GOPLUS_API_KEY=
 ETHERSCAN_API_KEY=
 HELIUS_API_KEY=
 CMC_API_KEY=
+TURNSTILE_SECRET_KEY=
 ```
 
 ---
 
-## Task Priority Order
+## Progress Status
 
-Kerjakan berurutan:
+### Selesai
+- Phase 1: Visual fixes, i18n (274 keys EN/ID/AR/ZH), Vercel config
+- Phase 2: Clerk auth, ProtectedRoute, Clerk webhook handler
+- Phase 3: Whop webhook, /api/redeem, Turnstile CAPTCHA
+- Phase 4: Scanner API (GoPlus+Etherscan+Helius+Tronscan), AI summary (Haiku), PDF/CSV export
 
-### Phase 1 — Foundation (Wajib dulu)
-1. [x] ~~Fix LOGO_URL path~~ — done
-2. [ ] Fix visual bugs: button alignment, chain pills
-2. [ ] Vercel config — `vercel.json`, env vars, build settings
-3. [ ] i18n fix — pastikan EN/ID/AR/TR semua keys tersedia
+### Phase 5 — Sekarang
+- [ ] Team seats backend (Business, max 3 seats)
+- [ ] Admin endpoints
 
-### Phase 2 — Auth
-4. [ ] Clerk auth wiring di `main.tsx`
-5. [ ] ProtectedRoute component
-6. [ ] Clerk webhook handler → sync ke Supabase
+### Setelah Phase 5
+- Visual fixes minor (hero text terpotong, chain dropdown overlap)
+- UI rombak total (Google AI Pro)
+- Dashboard/Portfolio/Flagged/Admin UI (Manus)
 
-### Phase 3 — Payment Flow
-7. [ ] Whop webhook endpoint (`/api/whop/webhook`) + signature verification
-8. [ ] Insert token ke Supabase setelah payment
-9. [ ] Resend email token ke buyer
-10. [ ] `/api/redeem` endpoint
-11. [ ] Turnstile CAPTCHA di redeem form
+---
 
-### Phase 4 — Core Features
-12. [ ] Scanner API integration (GoPlus, Etherscan, Helius, Tronscan)
-13. [ ] Risk score calculation (0–100)
-14. [ ] Claude Haiku AI summary
-15. [ ] PDF/CSV export
+## Phase 5 — Task Detail
 
-### Phase 5 — Business Features
-16. [ ] Team seats backend (Business tier)
-17. [ ] Admin page endpoints
+### Team Seats (Business tier, max 3 seats)
+```
+POST /api/team/invite            — owner invite member by email
+GET  /api/team/members           — list semua members
+DELETE /api/team/members/:userId — remove member
+```
+- Buat tabel `team_members` di Supabase (schema di atas)
+- Member yang di-invite dapat akses Business features
+- Enforce max 3 seats per Business account
+
+### Admin Endpoints
+```
+GET   /api/admin/users                — list semua users
+GET   /api/admin/tokens               — list tokens + status
+GET   /api/admin/scans                — list scan history
+PATCH /api/admin/users/:userId/plan   — manual override plan
+```
+- Admin check: Clerk publicMetadata.role === 'admin'
 
 ---
 
@@ -249,17 +276,6 @@ Kerjakan berurutan:
 - Named exports untuk components
 - Async/await, bukan `.then()`
 - Error handling: selalu return `{ success, error }` dari API
-- Console.log boleh untuk development, tapi tandai dengan `// TODO: remove`
-
----
-
-## Testing Sebelum Push
-
-Sebelum setiap push ke main, pastikan:
-- [ ] `pnpm build` tidak error
-- [ ] Auth flow: sign in → redirect ke /dashboard
-- [ ] Protected routes reject unauthenticated users
-- [ ] .env tidak ikut ke-commit (cek .gitignore)
 
 ---
 
@@ -267,6 +283,5 @@ Sebelum setiap push ke main, pastikan:
 
 - **Repo**: github.com/OwsSadnis/AltWallet (branch: main)
 - **Dev server**: `pnpm dev` → localhost:3000
-- **Manus akan handle**: Dashboard UI, Portfolio UI, Flagged UI, Admin UI — jangan buat halaman ini dari scratch
-- **Tagline ID** (jangan ubah): *"Kenali Dulu Siapa Mitra Anda."*
-- Setelah Claude Code selesai → push main → baru Manus
+- **Tagline ID** (jangan ubah): "Kenali Dulu Siapa Mitra Anda."
+- Setelah Phase 5 selesai → push main → visual fixes → UI rombak → Manus

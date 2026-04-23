@@ -11,7 +11,7 @@
  */
 
 import { Router } from "express";
-import { requireAuth, getPlanFromClerk } from "../middleware/auth.js";
+import { requireAuth, getEffectivePlan } from "../middleware/auth.js";
 import { scanWithGoPlus } from "../services/goplus.js";
 import { fetchChainData } from "../services/chainData.js";
 import { generateAiSummary } from "../services/aiSummary.js";
@@ -86,7 +86,7 @@ scanRouter.post("/", requireAuth, async (req, res) => {
   }
 
   const userId = req.userId!;
-  const plan = await getPlanFromClerk(userId);
+  const plan = await getEffectivePlan(userId);
 
   // ── Plan enforcement ──────────────────────────────────────────────────────
   if (plan === "free") {
