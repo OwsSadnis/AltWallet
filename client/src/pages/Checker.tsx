@@ -4,6 +4,7 @@
 //  3) Results (staggered reveal of ScoreCard, VitalsCard, Flags, Tx, AI summary)
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth, useUser } from "@clerk/clerk-react";
 import {
   ChainCode,
   EXAMPLE_ADDRESSES,
@@ -25,15 +26,56 @@ import {
 } from "@/components/aw/ResultCards";
 import { ShieldCheck, RotateCw, Check, Loader2, Info } from "lucide-react";
 import { useT } from "@/i18n";
+import { useI18n } from "@/i18n";
 
 type Stage = "entry" | "scanning" | "results";
 
+// ─── API helpers ──────────────────────────────────────────────────────────────
+interface ScanApiResponse extends ScanResult {
+  scanId?: string;
+  plan?: string;
+  error?: string;
+  code?: string;
+}
+
+async function callScanApi(
+  address: string,
+  chain: ChainCode,
+  lang: string,
+  getToken: () => Promise<string | null>
+): Promise<ScanApiResponse> {
+  const token = await getToken();
+  const res = await fetch("/api/scan", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ address, chain, lang }),
+  });
+  return (await res.json()) as ScanApiResponse;
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export default function Checker() {
   const [location] = useLocation();
+  const { isSignedIn, getToken } = useAuth();
+  const { user } = useUser();
+  const { lang } = useI18n();
+
   const [stage, setStage] = useState<Stage>("entry");
   const [scan, setScan] = useState<ScanResult | null>(null);
+  const [scanId, setScanId] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<string>("free");
+  const [scanError, setScanError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [stepIdx, setStepIdx] = useState(0);
+
+  // Sync plan from Clerk metadata
+  useEffect(() => {
+    const plan = (user?.publicMetadata?.plan as string) ?? "free";
+    setUserPlan(plan);
+  }, [user]);
 
   const initial = useMemo(() => {
     if (typeof window === "undefined") return null;
@@ -54,38 +96,91 @@ export default function Checker() {
     setStage("scanning");
     setProgress(0);
     setStepIdx(0);
+    setScanError(null);
+    setScan(null);
+    setScanId(null);
 
-    const total = 2600;
+    // Animation: 3s (real API usually finishes in 2–5s)
+    const ANIM_DURATION = 3000;
     const tStart = performance.now();
     let raf: number;
+    let animDone = false;
+    let apiResult: ScanResult | null = null;
+    let apiError: string | null = null;
+
     const step = (t: number) => {
-      const p = Math.min(1, (t - tStart) / total);
+      const p = Math.min(0.95, (t - tStart) / ANIM_DURATION); // cap at 95% until API returns
       setProgress(p);
       if (p > 0.25) setStepIdx((s) => Math.max(s, 1));
       if (p > 0.5) setStepIdx((s) => Math.max(s, 2));
       if (p > 0.75) setStepIdx((s) => Math.max(s, 3));
-      if (p < 1) raf = requestAnimationFrame(step);
-      else {
-        const result = generateScan(address, chain);
-        setScan(result);
-        setStage("results");
+      if (p < 0.95) {
+        raf = requestAnimationFrame(step);
+      } else {
+        animDone = true;
+        if (apiResult) finish(apiResult, null);
+        else if (apiError) finish(null, apiError);
       }
     };
     raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
+
+    const finish = (result: ScanResult | null, error: string | null) => {
+      cancelAnimationFrame(raf);
+      setProgress(1);
+      setStepIdx(3);
+      if (result) {
+        setScan(result);
+        setStage("results");
+      } else {
+        setScanError(error ?? "Scan failed.");
+        setStage("entry");
+      }
+    };
+
+    // API call (signed-in users) or mock (demo mode)
+    if (isSignedIn) {
+      callScanApi(address, chain, lang, getToken)
+        .then((data) => {
+          if (data.error) {
+            apiError = data.error;
+          } else {
+            apiResult = data as ScanResult;
+            if (data.scanId) setScanId(data.scanId);
+            if (data.plan) setUserPlan(data.plan);
+          }
+          if (animDone) finish(apiResult, apiError);
+        })
+        .catch((err) => {
+          console.warn("[checker] API call failed, using mock data:", err);
+          apiResult = generateScan(address, chain);
+          if (animDone) finish(apiResult, null);
+        });
+    } else {
+      // Demo mode — mock data for unauthenticated visitors
+      setTimeout(() => {
+        apiResult = generateScan(address, chain);
+        if (animDone) finish(apiResult, null);
+      }, 1200);
+    }
   };
 
   const reset = () => {
     setStage("entry");
     setScan(null);
+    setScanId(null);
+    setScanError(null);
     setProgress(0);
     setStepIdx(0);
     window.history.replaceState({}, "", "/checker");
   };
 
+  const isPro = userPlan === "pro" || userPlan === "business";
+
   return (
     <div className="container aw-scan">
-      {stage === "entry" && <EntryView onScan={startScan} />}
+      {stage === "entry" && (
+        <EntryView onScan={startScan} errorMsg={scanError} />
+      )}
       {stage === "scanning" && (
         <ScanningView
           address={initial?.address || ""}
@@ -96,6 +191,8 @@ export default function Checker() {
       {stage === "results" && scan && (
         <ResultsView
           scan={scan}
+          scanId={scanId}
+          isPro={isPro}
           onReset={reset}
           onRescan={() => startScan(scan.address, scan.chain)}
         />
@@ -104,12 +201,13 @@ export default function Checker() {
   );
 }
 
-// ---------- Entry -----------
-
+// ─── Entry view ───────────────────────────────────────────────────────────────
 function EntryView({
   onScan,
+  errorMsg,
 }: {
   onScan: (addr: string, chain: ChainCode) => void;
+  errorMsg: string | null;
 }) {
   const t = useT();
   return (
@@ -135,6 +233,29 @@ function EntryView({
           autoFocus
           ctaLabel={t("common.scan_wallet")}
         />
+
+        {errorMsg && (
+          <div
+            className="mt-3 text-[13px] px-4 py-3 rounded-xl"
+            style={{
+              background: "rgba(229,62,62,0.08)",
+              color: "var(--risk-high)",
+              border: "1px solid rgba(229,62,62,0.2)",
+            }}
+          >
+            {errorMsg}
+            {errorMsg.includes("limit") || errorMsg.includes("chain") ? (
+              <a
+                href="/pricing"
+                className="ml-2 underline"
+                style={{ color: "var(--accent)" }}
+              >
+                Upgrade →
+              </a>
+            ) : null}
+          </div>
+        )}
+
         <div className="aw-examples-scroll">
           <span className="aw-examples-label">{t("common.try")}</span>
           <div className="aw-examples-row">
@@ -185,8 +306,7 @@ function EntryView({
   );
 }
 
-// ---------- Scanning -----------
-
+// ─── Scanning view ────────────────────────────────────────────────────────────
 function ScanningView({
   address,
   progress,
@@ -229,7 +349,10 @@ function ScanningView({
       </div>
 
       <div className="aw-progress">
-        <div className="aw-progress-fill" style={{ width: `${progress * 100}%` }} />
+        <div
+          className="aw-progress-fill"
+          style={{ width: `${progress * 100}%` }}
+        />
       </div>
 
       <div className="aw-steps mt-6">
@@ -247,14 +370,17 @@ function ScanningView({
   );
 }
 
-// ---------- Results -----------
-
+// ─── Results view ─────────────────────────────────────────────────────────────
 function ResultsView({
   scan,
+  scanId,
+  isPro,
   onReset,
   onRescan,
 }: {
   scan: ScanResult;
+  scanId: string | null;
+  isPro: boolean;
   onReset: () => void;
   onRescan: () => void;
 }) {
@@ -286,10 +412,10 @@ function ResultsView({
           <VitalsCard scan={scan} />
           <RiskFlagsCard scan={scan} />
         </div>
-        <TxHistoryCard scan={scan} isPro={false} />
-        <AiSummaryCard text={scan.aiSummary} isPro={false} />
+        <TxHistoryCard scan={scan} isPro={isPro} />
+        <AiSummaryCard text={scan.aiSummary} isPro={isPro} />
         <EducationBanner />
-        <DownloadBar isPro={false} />
+        <DownloadBar isPro={isPro} scanId={scanId} />
       </div>
 
       <div className="aw-banner mt-4">

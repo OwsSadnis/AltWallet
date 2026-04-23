@@ -14,6 +14,8 @@ import { clerkMiddleware } from "./middleware/auth.js";
 import { clerkWebhookRouter } from "./routes/clerkWebhook.js";
 import { whopWebhookRouter } from "./routes/whopWebhook.js";
 import { redeemRouter } from "./routes/redeem.js";
+import { scanRouter } from "./routes/scan.js";
+import { exportRouter } from "./routes/export.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -98,7 +100,6 @@ const webhookLimiter = rateLimit({
 });
 
 app.use("/api/", apiLimiter);
-app.use("/api/scan", scanLimiter);
 app.use("/api/webhooks", webhookLimiter);
 
 // ─── WEBHOOK ROUTES (before express.json — raw body needed for HMAC verification)
@@ -114,10 +115,8 @@ app.use(clerkMiddleware());
 
 // ─── API ROUTES ───────────────────────────────────────────────────────────────
 app.use("/api/redeem", redeemRouter);
-// import { scanRouter } from "./routes/scan.js";
-// import { adminRouter } from "./routes/admin.js";
-// app.use("/api/scan", scanRouter);
-// app.use("/api/admin", adminRouter);
+app.use("/api/scan", scanLimiter, scanRouter);
+app.use("/api/export", exportRouter);
 
 // Health check — no auth needed
 app.get("/api/health", (_req, res) => {

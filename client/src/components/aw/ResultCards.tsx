@@ -422,8 +422,24 @@ export function VitalsCard({ scan }: { scan: ScanResult }) {
 
 // ---------------- Download / action bar ----------------
 
-export function DownloadBar({ isPro = false }: { isPro?: boolean }) {
+export function DownloadBar({
+  isPro = false,
+  scanId = null,
+}: {
+  isPro?: boolean;
+  scanId?: string | null;
+}) {
   const t = useT();
+
+  const downloadPdf = () => {
+    if (!scanId) return;
+    window.location.href = `/api/export/pdf?scanId=${encodeURIComponent(scanId)}`;
+  };
+
+  const downloadCsv = () => {
+    window.location.href = "/api/export/csv";
+  };
+
   return (
     <div
       className="flex items-center justify-between gap-4 rounded-2xl border p-5 flex-wrap"
@@ -444,16 +460,22 @@ export function DownloadBar({ isPro = false }: { isPro?: boolean }) {
       </div>
       <div className="flex items-center gap-2">
         {isPro ? (
-          <Button variant="primary" size="md" icon={FileDown}>
-            {t("dl.pdf")}
-          </Button>
+          <>
+            <Button
+              variant="primary"
+              size="md"
+              icon={FileDown}
+              onClick={downloadPdf}
+              disabled={!scanId}
+            >
+              {t("dl.pdf")}
+            </Button>
+            <Button variant="secondary" size="md" icon={FileDown} onClick={downloadCsv}>
+              CSV
+            </Button>
+          </>
         ) : (
-          <Button
-            variant="secondary"
-            size="md"
-            icon={Lock}
-            disabled
-          >
+          <Button variant="secondary" size="md" icon={Lock} disabled>
             {t("dl.locked")}
           </Button>
         )}
