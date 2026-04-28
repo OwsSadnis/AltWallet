@@ -100,7 +100,7 @@ export default function Redeem() {
     if (!token.trim()) return;
 
     if (!isSignedIn) {
-      navigate("/sign-in");
+      navigate("/sign-in?redirect=%2Fredeem");
       return;
     }
 

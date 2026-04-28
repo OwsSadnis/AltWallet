@@ -117,7 +117,7 @@ export function Navbar() {
                 )}
               </div>
 
-              <Link href="/redeem" className="aw-btn aw-btn-ghost aw-btn-sm hidden md:inline-flex">
+              <Link href="/sign-in" className="aw-btn aw-btn-ghost aw-btn-sm hidden md:inline-flex">
                 {t("nav.signin")}
               </Link>
               <Link href="/checker" className="aw-btn aw-btn-primary aw-btn-sm hidden md:inline-flex">
@@ -208,7 +208,7 @@ export function Navbar() {
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                href="/redeem"
+                href="/sign-in"
                 onClick={() => setDrawerOpen(false)}
                 className="aw-btn aw-btn-secondary aw-btn-lg w-full"
               >

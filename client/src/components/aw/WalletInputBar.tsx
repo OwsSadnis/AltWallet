@@ -99,7 +99,7 @@ export function WalletInputBar({
     <div
       ref={rootRef}
       className={cn(
-        "aw-wallet-bar relative flex items-center gap-2 rounded-full border transition-colors",
+        "aw-wallet-bar relative overflow-visible flex items-center gap-2 rounded-full border transition-colors",
         "bg-[color:var(--bg-inset)] focus-within:border-[color:var(--accent)] focus-within:shadow-[0_0_0_3px_var(--accent-ghost)]"
       )}
       style={{
@@ -160,9 +160,9 @@ export function WalletInputBar({
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 top-[calc(100%+8px)] z-50 min-w-[260px] rounded-2xl border p-1.5 aw-fade-in"
+          className="absolute left-0 top-[calc(100%+8px)] z-[200] min-w-[260px] rounded-2xl border p-1.5 aw-fade-in"
           style={{
-            background: "#111",
+            backgroundColor: "var(--bg-elevated)",
             borderColor: "#1a1a1a",
             boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
           }}
