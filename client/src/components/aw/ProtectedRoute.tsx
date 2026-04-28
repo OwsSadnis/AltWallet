@@ -1,9 +1,10 @@
 import { useAuth } from "@clerk/clerk-react";
-import { Redirect } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import type { PropsWithChildren } from "react";
 
 export function ProtectedRoute({ children }: PropsWithChildren) {
   const { isSignedIn, isLoaded } = useAuth();
+  const [currentPath] = useLocation();
 
   if (!isLoaded) {
     return (
@@ -17,7 +18,7 @@ export function ProtectedRoute({ children }: PropsWithChildren) {
   }
 
   if (!isSignedIn) {
-    return <Redirect to="/sign-in" />;
+    return <Redirect to={"/sign-in?redirect=" + encodeURIComponent(currentPath)} />;
   }
 
   return <>{children}</>;
