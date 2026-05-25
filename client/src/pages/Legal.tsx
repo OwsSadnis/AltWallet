@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { ArrowLeft, Mail } from "lucide-react";
 import { useT } from "@/i18n";
 
-const UPDATED = "Apr 18, 2026";
+const UPDATED = "May 2026";
 const CONTACT_EMAIL = "hello@altwallet.id";
 const COMPANY = "AltNeurealms";
 
@@ -49,7 +49,7 @@ export function Terms() {
         accounts that violate these Terms, with or without notice.
       </p>
 
-      <h2>4. Subscription plans & payments</h2>
+      <h2>4. Subscription plans &amp; payments</h2>
       <p>
         AltWallet offers Free, Pro and Business plans. Paid subscriptions are
         billed externally by Whop subject to Whop's own terms of service.
@@ -83,12 +83,15 @@ export function Terms() {
 
       <h2>7. Data retention</h2>
       <p>
-        We retain your account email, plan status and a log of scan history
-        for the lifetime of your account plus 90 days after account
-        deletion, to comply with regulatory record-keeping requirements.
-        Aggregate and de-identified analytics may be retained indefinitely.
-        You may request earlier deletion by contacting us at the address
-        below, subject to legal retention obligations.
+        Scan history is retained according to your plan tier: 30 days for
+        Free accounts, 12 months for Pro accounts, and 24 months for
+        Business accounts. Account email and plan status are retained for
+        the lifetime of your account. Following account deletion, we retain
+        a minimal record for 90 days to satisfy regulatory obligations,
+        after which personal data is permanently erased. Aggregate and
+        de-identified analytics may be retained indefinitely. You may
+        request earlier deletion by contacting us at the address below,
+        subject to applicable legal retention obligations.
       </p>
 
       <h2>8. Disclaimers</h2>
@@ -124,14 +127,14 @@ export function Terms() {
         access the Service for personal or internal business use only.
       </p>
 
-      <h2>11. Governing law & dispute resolution</h2>
+      <h2>11. Governing law &amp; dispute resolution</h2>
       <p>
         These Terms are governed by the laws of the Republic of Indonesia,
         without regard to its conflict-of-law principles. Any dispute
         arising out of or in connection with these Terms shall be submitted
-        to the exclusive jurisdiction of the competent courts of Jakarta,
-        Indonesia, except where local consumer-protection law grants you a
-        different mandatory forum.
+        to the exclusive jurisdiction of the competent courts of Indonesia,
+        except where local consumer-protection law grants you a different
+        mandatory forum.
       </p>
 
       <h2>12. Changes to these Terms</h2>
@@ -149,7 +152,7 @@ export function Terms() {
         <a href={`mailto:${CONTACT_EMAIL}`} className="aw-legal-link">
           {CONTACT_EMAIL}
         </a>
-        . Registered entity: AltNeurealms, Jakarta, Indonesia.
+        . Operated by AltNeurealms, Indonesia.
       </p>
     </LegalShell>
   );
@@ -170,12 +173,13 @@ export function Privacy() {
       <h2>1. Information we collect</h2>
       <p>
         <strong>Account information:</strong> email address, plan tier,
-        hashed password, and (optional) display name. <br />
+        hashed password, and (optional) display name.{" "}
+        <br />
         <strong>Usage data:</strong> the wallet addresses you submit for
         scanning, chain selected, timestamp, and IP address at the time of
         the scan, so we can show your history and enforce rate limits.{" "}
         <br />
-        <strong>Device & log data:</strong> browser user agent, operating
+        <strong>Device &amp; log data:</strong> browser user agent, operating
         system, referring URL, and coarse geo-IP for abuse detection.
       </p>
 
@@ -196,14 +200,13 @@ export function Privacy() {
         improve the product.
       </p>
 
-      <h2>4. Cookies & similar technologies</h2>
+      <h2>4. Cookies &amp; similar technologies</h2>
       <p>
         AltWallet uses strictly-necessary cookies to keep you signed in and
-        remember your language preference. We use a privacy-respecting,
-        cookieless analytics endpoint (Umami) for aggregate page-view
-        counts; no personal identifiers or cross-site tracking IDs are
-        involved. You can disable cookies in your browser, but parts of the
-        Service (such as sign-in) will stop working.
+        remember your language preference. We do not use third-party tracking
+        cookies or cross-site advertising identifiers. You can disable cookies
+        in your browser, but parts of the Service (such as sign-in) will stop
+        working.
       </p>
 
       <h2>5. Third-party services</h2>
@@ -231,29 +234,43 @@ export function Privacy() {
           agreement.
         </li>
         <li>
-          <strong>Cloudflare</strong> — provides DDoS protection and edge
-          routing.
+          <strong>Clerk</strong> — handles user authentication and account
+          management.
+        </li>
+        <li>
+          <strong>Resend</strong> — handles transactional email delivery.
+        </li>
+        <li>
+          <strong>Supabase</strong> — provides database and backend
+          infrastructure hosted in Singapore.
+        </li>
+        <li>
+          <strong>Cloudflare</strong> — provides DDoS protection, edge
+          routing, and bot mitigation (Turnstile).
         </li>
       </ul>
 
       <h2>6. Data retention</h2>
       <p>
         Account email and plan status are retained for the lifetime of your
-        account. Scan history is retained per plan (30 days Free, 12 months
-        Pro, 24 months Business) and then purged in monthly batches.
-        Server logs are retained for 30 days for abuse detection. After
-        account deletion, we keep a minimal record for 90 days to satisfy
-        regulatory obligations, then permanently erase personal data.
+        account. Scan history is retained per plan tier: 30 days for Free
+        accounts, 12 months for Pro accounts, and 24 months for Business
+        accounts, then purged in monthly batches. Server logs are retained
+        for 30 days for abuse detection. After account deletion, we keep a
+        minimal record for 90 days to satisfy regulatory obligations, then
+        permanently erase personal data. Aggregate and de-identified
+        analytics may be retained indefinitely.
       </p>
 
       <h2>7. Security measures</h2>
       <p>
         We apply industry-standard safeguards: TLS 1.3 in transit, AES-256
-        encryption at rest, bcrypt password hashing, principle-of-least-
-        privilege access controls, and regular third-party security
-        reviews. No system is fully impenetrable; if we become aware of a
-        breach that affects you, we will notify you within 72 hours in
-        accordance with applicable law.
+        encryption at rest, bcrypt password hashing, and
+        principle-of-least-privilege access controls. We conduct periodic
+        internal security reviews of our infrastructure and codebase. No
+        system is fully impenetrable; if we become aware of a breach that
+        affects you, we will notify you within 72 hours in accordance with
+        applicable law.
       </p>
 
       <h2>8. Your rights</h2>
@@ -294,7 +311,7 @@ export function Privacy() {
         <a href={`mailto:${CONTACT_EMAIL}`} className="aw-legal-link">
           {CONTACT_EMAIL}
         </a>
-        . Data controller: AltNeurealms, Jakarta, Indonesia.
+        . Operated by AltNeurealms, Indonesia.
       </p>
     </LegalShell>
   );

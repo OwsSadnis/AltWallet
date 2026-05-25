@@ -50,7 +50,7 @@ import {
 // Sample addresses (used when free user views blurred preview)
 const SAMPLE_ADDRESS = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1";
 
-export default function Portfolio() {
+export default function History() {
   const t = useT();
   const { session, signIn, signOut } = useSession();
 

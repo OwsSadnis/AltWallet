@@ -18,7 +18,7 @@ export function Navbar() {
 
   const LINKS = [
     { label: t("nav.checker"), href: "/checker" },
-    { label: t("nav.portfolio"), href: "/portfolio" },
+    { label: t("nav.history"), href: "/history" },
     { label: t("nav.pricing"), href: "/pricing" },
     { label: t("nav.redeem"), href: "/redeem" },
   ];

@@ -18,7 +18,7 @@ import SignIn from "./pages/SignIn";
 import Dashboard from "./pages/Dashboard";
 import Flagged from "./pages/Flagged";
 import Admin from "./pages/Admin";
-import Portfolio from "./pages/Portfolio";
+import History from "./pages/History";
 import { Terms, Privacy } from "./pages/Legal";
 
 function Router() {
@@ -35,9 +35,9 @@ function Router() {
             <Dashboard />
           </ProtectedRoute>
         </Route>
-        <Route path="/portfolio">
+        <Route path="/history">
           <ProtectedRoute>
-            <Portfolio />
+            <History />
           </ProtectedRoute>
         </Route>
         <Route path="/flagged">
