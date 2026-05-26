@@ -1,4 +1,5 @@
 import { SignIn } from "@clerk/clerk-react";
+import { dark } from "@clerk/themes";
 
 export default function SignInPage() {
   const params = new URLSearchParams(window.location.search);
@@ -6,20 +7,35 @@ export default function SignInPage() {
 
   return (
     <div className="flex items-center justify-center min-h-[80vh]">
-      <SignIn
-        routing="hash"
-        signUpUrl="/sign-in#/sign-up"
-        fallbackRedirectUrl={redirectTo}
-        appearance={{
-          variables: {
-            colorPrimary: "#1D9E75",
-            colorBackground: "#0f0f0f",
-            colorText: "#ffffff",
-            colorInputBackground: "#1a1a1a",
-            colorInputText: "#ffffff",
-          },
-        }}
-      />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <img src="/logo-altwallet.png" alt="AltWallet" style={{ height: "48px", marginBottom: "24px" }} />
+        <p style={{ color: "#888", fontSize: "13px", marginBottom: "8px" }}>by AltNeurealms</p>
+        <SignIn
+          routing="hash"
+          signUpUrl="/sign-in#/sign-up"
+          fallbackRedirectUrl={redirectTo}
+          appearance={{
+            baseTheme: dark,
+            variables: {
+              colorPrimary: "#1D9E75",
+              colorBackground: "#111111",
+              colorText: "#ffffff",
+              colorInputBackground: "#1a1a1a",
+              colorInputText: "#ffffff",
+            },
+            elements: {
+              socialButtonsBlockButton: {
+                backgroundColor: "#1a1a1a",
+                border: "1px solid #333333",
+                color: "#ffffff",
+              },
+              socialButtonsBlockButtonText: {
+                color: "#ffffff",
+              },
+            },
+          }}
+        />
+      </div>
     </div>
   );
 }
