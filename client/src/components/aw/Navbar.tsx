@@ -43,8 +43,16 @@ export function Navbar() {
     };
   }, [drawerOpen]);
 
-  const isActive = (href: string) =>
-    href === "/" ? location === "/" : location.startsWith(href);
+  const isActive = (href: string) => {
+    if (href === "/") return location === "/";
+    if (location.startsWith(href)) return true;
+    if (location === "/sign-in") {
+      const params = new URLSearchParams(window.location.search);
+      const redirect = decodeURIComponent(params.get("redirect") || "");
+      return redirect.startsWith(href);
+    }
+    return false;
+  };
 
   const pickLang = (code: LangCode) => {
     setLang(code);
