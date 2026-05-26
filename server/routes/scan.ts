@@ -15,6 +15,8 @@ import { requireAuth, getEffectivePlan } from "../middleware/auth.js";
 import { scanWithGoPlus } from "../services/goplus.js";
 import { fetchChainData } from "../services/chainData.js";
 import { generateAiSummary } from "../services/aiSummary.js";
+import { getCached, setCached } from "../services/scanCache.js";
+import { checkBurstAnomaly } from "../middleware/anomalyDetection.js";
 
 export const scanRouter = Router();
 
@@ -46,11 +48,15 @@ async function saveScan(
   address: string,
   chain: string,
   score: number,
-  result: unknown
+  result: unknown,
+  label?: string
 ): Promise<string | null> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
+
+  const body: Record<string, unknown> = { user_id: userId, address, chain, risk_score: score, result };
+  if (label !== undefined) body.label = label;
 
   const res = await fetch(`${url}/rest/v1/wallet_scans`, {
     method: "POST",
@@ -60,7 +66,7 @@ async function saveScan(
       Authorization: `Bearer ${key}`,
       Prefer: "return=representation",
     },
-    body: JSON.stringify({ user_id: userId, address, chain, risk_score: score, result }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     console.error("[scan] Supabase save failed:", await res.text());
@@ -72,10 +78,11 @@ async function saveScan(
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 scanRouter.post("/", requireAuth, async (req, res) => {
-  const { address, chain, lang = "EN" } = req.body as {
+  const { address, chain, lang = "EN", label } = req.body as {
     address?: string;
     chain?: string;
     lang?: string;
+    label?: string;
   };
 
   if (!address || typeof address !== "string" || !address.trim()) {
@@ -106,6 +113,16 @@ scanRouter.post("/", requireAuth, async (req, res) => {
       });
     }
   }
+
+  // ── Burst anomaly detection ───────────────────────────────────────────────
+  const isBurst = checkBurstAnomaly(userId);
+  if (isBurst) {
+    await new Promise(r => setTimeout(r, 3000));
+  }
+
+  // ── Cache lookup ──────────────────────────────────────────────────────────
+  const cached = getCached(address, chain);
+  if (cached) return res.json({ ...cached as object, fromCache: true, scanId: null, plan });
 
   // ── GoPlus security scan ─────────────────────────────────────────────────
   let goPlusResult;
@@ -198,8 +215,11 @@ scanRouter.post("/", requireAuth, async (req, res) => {
       : "Unknown",
   };
 
+  // ── Cache result ──────────────────────────────────────────────────────────
+  setCached(address.trim(), chain, scanResult);
+
   // ── Persist ───────────────────────────────────────────────────────────────
-  const scanId = await saveScan(userId, address.trim(), chain, finalScore, scanResult);
+  const scanId = await saveScan(userId, address.trim(), chain, finalScore, scanResult, label);
 
   return res.json({ ...scanResult, scanId, plan });
 });

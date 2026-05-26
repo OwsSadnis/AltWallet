@@ -14,6 +14,7 @@
 import { Router } from "express";
 import express from "express";
 import crypto from "crypto";
+import { isDisposableEmail } from "../middleware/blockDisposableEmail.js";
 
 export const clerkWebhookRouter = Router();
 
@@ -125,6 +126,11 @@ clerkWebhookRouter.post(
         emails?.find((e) => e.id === primaryEmailId)?.email_address ??
         emails?.[0]?.email_address ??
         "";
+
+      if (type === "user.created" && isDisposableEmail(primaryEmail)) {
+        console.warn("[webhook] blocked disposable email:", primaryEmail);
+        return res.status(200).json({ ok: true, skipped: true });
+      }
 
       await upsertUserInSupabase({
         clerk_id: userId,
