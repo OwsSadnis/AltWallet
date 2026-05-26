@@ -7,6 +7,7 @@ export const zh: Record<string, string> = {
   "nav.open_menu": "打开菜单",
   "nav.close_menu": "关闭菜单",
   "nav.language": "语言",
+  "nav.history": "记录",
 
   "common.try": "试试",
   "common.beta": "测试版",

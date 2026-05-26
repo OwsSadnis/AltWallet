@@ -7,6 +7,7 @@ export const id: Record<string, string> = {
   "nav.open_menu": "Buka menu",
   "nav.close_menu": "Tutup menu",
   "nav.language": "Bahasa",
+  "nav.history": "Riwayat",
 
   "common.try": "Coba",
   "common.beta": "Beta",

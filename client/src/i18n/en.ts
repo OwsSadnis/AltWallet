@@ -9,6 +9,7 @@ export const en: Record<string, string> = {
   "nav.open_menu": "Open menu",
   "nav.close_menu": "Close menu",
   "nav.language": "Language",
+  "nav.history": "History",
 
   // Common
   "common.try": "Try",

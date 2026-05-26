@@ -7,6 +7,7 @@ export const ar: Record<string, string> = {
   "nav.open_menu": "فتح القائمة",
   "nav.close_menu": "إغلاق القائمة",
   "nav.language": "اللغة",
+  "nav.history": "السجل",
 
   "common.try": "جرّب",
   "common.beta": "تجريبي",
