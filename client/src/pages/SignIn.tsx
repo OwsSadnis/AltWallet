@@ -8,8 +8,7 @@ export default function SignInPage() {
   return (
     <div className="flex items-center justify-center min-h-[80vh]">
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <img src="/logo-altwallet.png" alt="AltWallet" style={{ height: "48px", marginBottom: "24px" }} />
-        <p style={{ color: "#888", fontSize: "13px", marginBottom: "8px" }}>by AltNeurealms</p>
+        <img src="/logo-altwallet.png" alt="AltWallet" style={{ height: "192px", marginBottom: "24px" }} />
         <SignIn
           routing="hash"
           signUpUrl="/sign-in#/sign-up"
