@@ -8,9 +8,8 @@ export default function SignInPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0A0A0A", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ marginBottom: "32px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+      <div style={{ marginBottom: "32px" }}>
         <LogoImage height={240} />
-        <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", letterSpacing: "0.04em" }}>by AltNeurealms</span>
       </div>
       <SignIn
         routing="hash"
