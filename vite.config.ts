@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
+import { VitePWA } from "vite-plugin-pwa";
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -203,7 +204,28 @@ function vitePluginStorageProxy(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy()];
+const plugins = [
+  react(),
+  tailwindcss(),
+  jsxLocPlugin(),
+  vitePluginManusRuntime(),
+  vitePluginManusDebugCollector(),
+  vitePluginStorageProxy(),
+  VitePWA({
+    registerType: "prompt",
+    manifest: {
+      name: "AltWallet",
+      short_name: "AltWallet",
+      theme_color: "#0A0A0A",
+      background_color: "#0A0A0A",
+      display: "browser",
+      icons: [
+        { src: "/logo-altwallet.png", sizes: "192x192", type: "image/png" },
+        { src: "/logo-altwallet.png", sizes: "512x512", type: "image/png" },
+      ],
+    },
+  }),
+];
 
 export default defineConfig({
   plugins,

@@ -21,6 +21,7 @@ import Admin from "./pages/Admin";
 import History from "./pages/History";
 import { Terms, Privacy } from "./pages/Legal";
 import { AnnouncementBanner } from "./components/aw/AnnouncementBanner";
+import { UpdateBanner } from "./components/aw/UpdateBanner";
 
 function Router() {
   return (
@@ -67,6 +68,7 @@ function App() {
       <ThemeProvider defaultTheme="dark">
         <I18nProvider>
           <TooltipProvider>
+            <UpdateBanner />
             <Toaster />
             <Router />
           </TooltipProvider>
