@@ -971,7 +971,7 @@ body {
   border: 1px solid var(--border-default);
   border-radius: 12px;
   padding: 16px 20px;
-  display: flex; align-items: flex-start; gap: 14px;
+  display: flex; align-items: center; gap: 14px;
   color: var(--fg-secondary); font-size: 13px; line-height: 1.55;
 }
 .aw-banner.aw-banner-center {
