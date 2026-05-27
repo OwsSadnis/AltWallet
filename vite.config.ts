@@ -213,6 +213,9 @@ const plugins = [
   vitePluginStorageProxy(),
   VitePWA({
     registerType: "prompt",
+    periodicSWUpdates: {
+      interval: 30 * 1000,
+    },
     manifest: {
       name: "AltWallet",
       short_name: "AltWallet",
