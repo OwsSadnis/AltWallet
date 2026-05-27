@@ -7,6 +7,6 @@ export const CHAIN_LOGOS: Record<ChainCode, string> = {
   BTC: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png",
   SOL: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png",
   TRX: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png",
-  XRP: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xrp/info/logo.png",
+  XRP: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ripple/info/logo.png",
   SUI: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/sui/info/logo.png",
 };
