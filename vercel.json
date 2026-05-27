@@ -6,9 +6,16 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 10
+    },
+    "api/announcements.ts": {
+      "maxDuration": 10
     }
   },
   "rewrites": [
+    {
+      "source": "/api/announcements",
+      "destination": "/api/announcements"
+    },
     {
       "source": "/api/:path*",
       "destination": "/api/index"
