@@ -1,5 +1,6 @@
 import { SignIn } from "@clerk/clerk-react";
 import { dark } from "@clerk/themes";
+import { LogoImage } from "@/components/aw/Logo";
 
 export default function SignInPage() {
   const params = new URLSearchParams(window.location.search);
@@ -7,7 +8,10 @@ export default function SignInPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0A0A0A", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-      <img src="/logo-altwallet.png" alt="AltWallet" style={{ height: "64px", marginBottom: "32px" }} />
+      <div style={{ marginBottom: "32px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+        <LogoImage height={240} />
+        <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", letterSpacing: "0.04em" }}>by AltNeurealms</span>
+      </div>
       <SignIn
         routing="hash"
         signUpUrl="/sign-in#/sign-up"
