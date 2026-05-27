@@ -10,6 +10,7 @@
 import { Router } from "express";
 import { clerkClient } from "@clerk/express";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
+import { customAlphabet } from "nanoid";
 
 export const adminRouter = Router();
 
@@ -85,6 +86,54 @@ adminRouter.get("/scans", async (req, res) => {
 
   const scans = await scansRes.json();
   return res.json({ success: true, scans });
+});
+
+// ─── POST /api/admin/generate-token ──────────────────────────────────────────
+const genSuffix = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 6);
+
+adminRouter.post("/generate-token", async (req, res) => {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(500).json({ success: false, error: "Server configuration error." });
+  }
+
+  const { plan, quantity } = req.body as { plan?: unknown; quantity?: unknown };
+
+  const VALID_PLANS = new Set(["pro", "business"]);
+  if (typeof plan !== "string" || !VALID_PLANS.has(plan)) {
+    return res.status(400).json({ success: false, error: "plan must be 'pro' or 'business'." });
+  }
+
+  const qty =
+    typeof quantity === "number" ? Math.min(Math.max(1, Math.floor(quantity)), 50) : 1;
+
+  const tokens: string[] = [];
+  for (let i = 0; i < qty; i++) {
+    tokens.push(`BETA-AW-${genSuffix()}`);
+  }
+
+  const rows = tokens.map((token) => ({
+    token,
+    plan,
+    used: false,
+    created_at: new Date().toISOString(),
+    source: "admin",
+  }));
+
+  const insertRes = await fetch(`${sbUrl()}/rest/v1/tokens`, {
+    method: "POST",
+    headers: sbHeaders({
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    }),
+    body: JSON.stringify(rows),
+  });
+
+  if (!insertRes.ok) {
+    console.error("[admin] Token insert failed:", await insertRes.text());
+    return res.status(500).json({ success: false, error: "Failed to save tokens." });
+  }
+
+  return res.json({ success: true, tokens });
 });
 
 // ─── PATCH /api/admin/users/:userId/plan ─────────────────────────────────────

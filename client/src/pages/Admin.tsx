@@ -1,6 +1,7 @@
-// Admin operations dashboard.
-// Access gated to ADMIN_EMAIL (simulated client-side — real enforcement would be server-side).
-import { useMemo, useState } from "react";
+// Admin operations dashboard — server-side auth via /api/admin/users (requireAdmin middleware).
+import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "wouter";
+import { useAuth, useUser } from "@clerk/clerk-react";
 import {
   Card,
   Chip,
@@ -26,19 +27,16 @@ import {
   ChevronDown,
   X,
   Shield,
-  LogIn,
   Check,
 } from "lucide-react";
 
-const ADMIN_EMAIL = "admin@altwallet.id";
-
-// ---------- Seed data ----------
+// ---------- Seed data (scans/stats only — tokens loaded from API) ----------
 type ScanRow = {
   id: string;
   addr: string;
   chain: ChainCode;
   email: string;
-  ts: number; // ms
+  ts: number;
   score: number;
 };
 
@@ -98,7 +96,6 @@ function seedScans(): ScanRow[] {
       });
     }
   }
-  // duplicate some rows with different timestamps to reach ~25 entries
   for (let i = 0; i < 10; i++) {
     const base = rows[i % rows.length];
     rows.push({
@@ -112,19 +109,6 @@ function seedScans(): ScanRow[] {
   return rows.sort((a, b) => b.ts - a.ts);
 }
 
-function seedTokens(): TokenRow[] {
-  return [
-    { code: "ALTW-PRO-8X2K-9NQH", plan: "Pro", used: true, email: "sasha@altwallet.id", when: "Apr 12, 2026" },
-    { code: "ALTW-BIZ-K2Z4-M91P", plan: "Business", used: false, email: null, when: "—" },
-    { code: "ALTW-PRO-3F4T-HY88", plan: "Pro", used: true, email: "amir@studio.dev", when: "Apr 10, 2026" },
-    { code: "ALTW-PRO-Z90Q-RR2L", plan: "Pro", used: false, email: null, when: "—" },
-    { code: "ALTW-BIZ-7Y2P-QZ4K", plan: "Business", used: true, email: "leo@acme.co", when: "Apr 08, 2026" },
-    { code: "ALTW-PRO-2M8N-J11X", plan: "Pro", used: true, email: "min@alpha.xyz", when: "Apr 05, 2026" },
-    { code: "ALTW-PRO-L3Q9-FP7B", plan: "Pro", used: false, email: null, when: "—" },
-    { code: "ALTW-BIZ-ZX4Y-H8NT", plan: "Business", used: false, email: null, when: "—" },
-  ];
-}
-
 type TokenRow = {
   code: string;
   plan: "Pro" | "Business";
@@ -133,76 +117,53 @@ type TokenRow = {
   when: string;
 };
 
-// ---------- Main component ----------
+// ---------- Main component — auth gated by server ----------
 export default function Admin() {
+  const [checking, setChecking] = useState(true);
   const [authed, setAuthed] = useState(false);
-  const [email, setEmail] = useState("");
-  const [err, setErr] = useState(false);
+  const [, navigate] = useLocation();
+  const { isLoaded, getToken } = useAuth();
 
-  if (!authed) {
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    getToken()
+      .then(async (token) => {
+        const r = await fetch("/api/admin/users", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (r.ok) {
+          setAuthed(true);
+        } else {
+          navigate("/");
+        }
+      })
+      .catch(() => navigate("/"))
+      .finally(() => setChecking(false));
+  }, [isLoaded, getToken, navigate]);
+
+  if (checking || !isLoaded) {
     return (
-      <div className="container" style={{ paddingTop: 96, paddingBottom: 160 }}>
-        <div className="mx-auto max-w-[440px] flex flex-col items-center gap-6 text-center">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{ background: "var(--accent-muted)", color: "var(--accent)" }}
-          >
-            <Shield className="w-6 h-6" />
-          </div>
-          <Eyebrow>Admin · restricted</Eyebrow>
-          <h1 className="text-white text-[28px] font-bold tracking-tight">
-            Enter the AltWallet control room
-          </h1>
-          <p className="text-[13px] text-[color:var(--fg-secondary)] max-w-sm leading-relaxed">
-            This area is accessible only to the configured <span className="mono text-white">ADMIN_EMAIL</span>.
-            Enter it below to continue. Demo: <span className="mono text-white">{ADMIN_EMAIL}</span>
-          </p>
-          <div className="aw-input w-full">
-            <Mail className="aw-input-icon" />
-            <input
-              className="mono"
-              placeholder="admin@altwallet.id"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setErr(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  if (email.trim().toLowerCase() === ADMIN_EMAIL) setAuthed(true);
-                  else setErr(true);
-                }
-              }}
-            />
-          </div>
-          {err && (
-            <div className="text-[12px]" style={{ color: "var(--risk-high)" }}>
-              That email isn't the configured admin. Access denied.
-            </div>
-          )}
-          <Button
-            variant="primary"
-            size="lg"
-            icon={LogIn}
-            onClick={() => {
-              if (email.trim().toLowerCase() === ADMIN_EMAIL) setAuthed(true);
-              else setErr(true);
-            }}
-          >
-            Continue
-          </Button>
+      <div className="container" style={{ paddingTop: 96 }}>
+        <div className="flex items-center justify-center gap-3 text-[color:var(--fg-tertiary)]">
+          <Shield className="w-5 h-5 animate-pulse" />
+          <span className="text-[13px]">Verifying access…</span>
         </div>
       </div>
     );
   }
 
+  if (!authed) return null;
   return <AdminDashboard />;
 }
 
 // ---------- Dashboard ----------
 function AdminDashboard() {
+  const { user } = useUser();
+  const { getToken } = useAuth();
   const [scans] = useState<ScanRow[]>(() => seedScans());
-  const [tokens, setTokens] = useState<TokenRow[]>(() => seedTokens());
+  const [tokens, setTokens] = useState<TokenRow[]>([]);
+  const [genLoading, setGenLoading] = useState(false);
 
   // Scan table state
   const [query, setQuery] = useState("");
@@ -212,6 +173,42 @@ function AdminDashboard() {
   // Token filter
   const [tokenFilter, setTokenFilter] = useState<"all" | "used" | "unused">("all");
   const [showGen, setShowGen] = useState(false);
+
+  // Load real tokens from API on mount
+  useEffect(() => {
+    getToken().then(async (token) => {
+      const r = await fetch("/api/admin/tokens", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      if (data.success && Array.isArray(data.tokens)) {
+        setTokens(
+          data.tokens.map(
+            (t: {
+              token: string;
+              plan: string;
+              used: boolean;
+              used_by?: string | null;
+              used_at?: string | null;
+            }) => ({
+              code: t.token,
+              plan: (t.plan === "business" ? "Business" : "Pro") as "Pro" | "Business",
+              used: t.used,
+              email: t.used_by ?? null,
+              when: t.used_at
+                ? new Date(t.used_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "—",
+            })
+          )
+        );
+      }
+    });
+  }, [getToken]);
 
   // Derived stats
   const todayCount = useMemo(() => {
@@ -275,13 +272,36 @@ function AdminDashboard() {
     tokenFilter === "all" ? true : tokenFilter === "used" ? r.used : !r.used
   );
 
-  const generateToken = (plan: "Pro" | "Business") => {
-    const rand = () => Math.random().toString(36).slice(2, 6).toUpperCase();
-    const code = `ALTW-${plan === "Pro" ? "PRO" : "BIZ"}-${rand()}-${rand()}`;
-    const row: TokenRow = { code, plan, used: false, email: null, when: "—" };
-    setTokens((prev) => [row, ...prev]);
-    setShowGen(false);
+  const generateToken = async (plan: "Pro" | "Business") => {
+    setGenLoading(true);
+    try {
+      const authToken = await getToken();
+      const r = await fetch("/api/admin/generate-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({ plan: plan.toLowerCase(), quantity: 1 }),
+      });
+      const data = await r.json();
+      if (data.success && Array.isArray(data.tokens)) {
+        const newRows: TokenRow[] = data.tokens.map((code: string) => ({
+          code,
+          plan,
+          used: false,
+          email: null,
+          when: "—",
+        }));
+        setTokens((prev) => [...newRows, ...prev]);
+      }
+    } finally {
+      setGenLoading(false);
+      setShowGen(false);
+    }
   };
+
+  const adminEmail = user?.primaryEmailAddress?.emailAddress ?? "admin";
 
   return (
     <div className="container aw-admin" style={{ paddingTop: 56, paddingBottom: 120 }}>
@@ -293,7 +313,7 @@ function AdminDashboard() {
               Operations dashboard
             </h1>
             <div className="text-[12px] text-[color:var(--fg-tertiary)] mt-2">
-              Logged in as <span className="mono text-white">{ADMIN_EMAIL}</span>
+              Logged in as <span className="mono text-white">{adminEmail}</span>
             </div>
           </div>
           <Button
@@ -495,6 +515,11 @@ function AdminDashboard() {
                 </div>
               </div>
             ))}
+            {filteredTokens.length === 0 && (
+              <div className="py-10 text-center text-[13px] text-[color:var(--fg-tertiary)]">
+                No tokens.
+              </div>
+            )}
           </div>
         </Card>
       </Reveal>
@@ -524,6 +549,7 @@ function AdminDashboard() {
             <div className="flex flex-col gap-3">
               <button
                 className="aw-plan-pick"
+                disabled={genLoading}
                 onClick={() => generateToken("Pro")}
               >
                 <div>
@@ -536,6 +562,7 @@ function AdminDashboard() {
               </button>
               <button
                 className="aw-plan-pick"
+                disabled={genLoading}
                 onClick={() => generateToken("Business")}
               >
                 <div>

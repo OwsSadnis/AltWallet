@@ -62,11 +62,33 @@ function detectPlan(data: Record<string, unknown>): "pro" | "business" {
   return "pro";
 }
 
+// ─── Supabase: check for existing membership token ───────────────────────────
+async function membershipTokenExists(membershipId: string): Promise<boolean> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return false;
+
+  const res = await fetch(
+    `${url}/rest/v1/tokens?whop_membership_id=eq.${encodeURIComponent(membershipId)}&select=id&limit=1`,
+    {
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+    }
+  );
+
+  if (!res.ok) return false;
+  const rows = (await res.json()) as unknown[];
+  return Array.isArray(rows) && rows.length > 0;
+}
+
 // ─── Supabase: insert token ───────────────────────────────────────────────────
 async function insertToken(
   token: string,
   plan: string,
-  email: string
+  email: string,
+  membershipId: string
 ): Promise<void> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -82,7 +104,7 @@ async function insertToken(
       apikey: key,
       Authorization: `Bearer ${key}`,
     },
-    body: JSON.stringify({ token, plan, email, used: false }),
+    body: JSON.stringify({ token, plan, email, used: false, whop_membership_id: membershipId }),
   });
 
   if (!res.ok) {
@@ -198,23 +220,29 @@ whopWebhookRouter.post(
 
     if (event.event === "membership.went_valid") {
       const { data } = event;
+      const membershipId = (data.id as string) || "";
       const user = data.user as Record<string, unknown> | undefined;
       const email = (user?.email as string) || "";
 
       if (!email) {
         console.error("[whop-webhook] No email in membership data — skipping");
-        // Return 200 so Whop doesn't retry indefinitely
         return res.json({ received: true });
+      }
+
+      // Deduplicate retries: if a token for this membership already exists, skip.
+      if (membershipId && (await membershipTokenExists(membershipId))) {
+        console.log(`[whop-webhook] Duplicate webhook for membership ${membershipId} — skipped`);
+        return res.json({ received: true, skipped: true });
       }
 
       const plan = detectPlan(data);
       const token = `BETA-AW-${genSuffix()}`;
 
-      await insertToken(token, plan, email);
+      await insertToken(token, plan, email, membershipId);
       await sendTokenEmail(email, token, plan);
 
       console.log(
-        `[whop-webhook] Token ${token} (${plan}) generated for ${email}`
+        `[whop-webhook] Token ${token} (${plan}) generated for ${email} [membership: ${membershipId}]`
       );
     }
 

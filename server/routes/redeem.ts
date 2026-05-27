@@ -79,24 +79,33 @@ async function fetchToken(tokenStr: string): Promise<TokenRow | null> {
   return rows[0] ?? null;
 }
 
-async function markTokenUsed(tokenId: string, userId: string): Promise<void> {
+async function markTokenUsed(tokenId: string, userId: string): Promise<boolean> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return;
+  if (!url || !key) return false;
 
-  await fetch(`${url}/rest/v1/tokens?id=eq.${encodeURIComponent(tokenId)}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      used: true,
-      used_by: userId,
-      used_at: new Date().toISOString(),
-    }),
-  });
+  // WHERE used = false makes this atomic: only the first concurrent request wins.
+  const res = await fetch(
+    `${url}/rest/v1/tokens?id=eq.${encodeURIComponent(tokenId)}&used=eq.false`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify({
+        used: true,
+        used_by: userId,
+        used_at: new Date().toISOString(),
+      }),
+    }
+  );
+
+  if (!res.ok) return false;
+  const rows = (await res.json()) as unknown[];
+  return Array.isArray(rows) && rows.length > 0;
 }
 
 // ─── Route ────────────────────────────────────────────────────────────────────
@@ -145,8 +154,11 @@ redeemRouter.post("/", requireAuth, async (req, res) => {
 
   const userId = req.userId!;
 
-  // 3. Mark token as used
-  await markTokenUsed(row.id, userId);
+  // 3. Mark token as used (atomic — WHERE used=false prevents double-redemption)
+  const marked = await markTokenUsed(row.id, userId);
+  if (!marked) {
+    return res.status(409).json({ success: false, error: "Token already redeemed." });
+  }
 
   // 4. Update Clerk publicMetadata
   await clerkClient.users.updateUser(userId, {
