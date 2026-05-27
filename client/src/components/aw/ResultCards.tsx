@@ -363,9 +363,16 @@ export function AiSummaryCard({
 
 // ---------------- Wallet vitals ----------------
 
+function parseWalletAge(age: string): { value: string; unit: string } {
+  const m = age.match(/^(\d+)\s+(months?|days?)$/i);
+  if (m) return { value: m[1], unit: m[2].toLowerCase().replace(/s$/, "") + "s" };
+  return { value: age, unit: "" };
+}
+
 export function VitalsCard({ scan }: { scan: ScanResult }) {
   const t = useT();
   const { tone } = riskFromScore(scan.score);
+  const { value: ageValue, unit: ageUnit } = parseWalletAge(scan.walletAge);
   const signals = [
     {
       label: t("vitals.red"),
@@ -384,8 +391,8 @@ export function VitalsCard({ scan }: { scan: ScanResult }) {
       tone: "safe" as RiskTone,
     },
     {
-      label: t("vitals.age"),
-      value: scan.walletAge,
+      label: ageUnit || t("vitals.age"),
+      value: ageValue,
       tone,
     },
     {

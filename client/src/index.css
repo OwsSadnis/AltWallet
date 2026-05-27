@@ -397,12 +397,11 @@ body {
   padding-top: 28px;
 }
 .aw-stat {
-  padding: 0 28px;
+  padding: 0 20px;
   border-right: 1px solid var(--border-default);
   min-width: 0;
 }
-.aw-stat:first-child { padding-left: 0; }
-.aw-stat:last-child { padding-right: 20px; border-right: none; }
+.aw-stat:last-child { border-right: none; }
 .aw-stat-num {
   font-size: clamp(22px, 2.4vw, 30px);
   font-weight: 700;
