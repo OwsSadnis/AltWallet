@@ -28,6 +28,7 @@ import {
   X,
   Shield,
   Check,
+  Megaphone,
 } from "lucide-react";
 
 // ---------- Seed data (scans/stats only — tokens loaded from API) ----------
@@ -157,6 +158,8 @@ export default function Admin() {
   return <AdminDashboard />;
 }
 
+type Tab = "ops" | "stats" | "monitor" | "announcements";
+
 // ---------- Dashboard ----------
 function AdminDashboard() {
   const { user } = useUser();
@@ -164,6 +167,7 @@ function AdminDashboard() {
   const [scans] = useState<ScanRow[]>(() => seedScans());
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [genLoading, setGenLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>("ops");
 
   // Scan table state
   const [query, setQuery] = useState("");
@@ -303,10 +307,17 @@ function AdminDashboard() {
 
   const adminEmail = user?.primaryEmailAddress?.emailAddress ?? "admin";
 
+  const TABS: { id: Tab; label: string }[] = [
+    { id: "ops", label: "Operations" },
+    { id: "stats", label: "Usage Stats" },
+    { id: "monitor", label: "API Monitor" },
+    { id: "announcements", label: "Announcements" },
+  ];
+
   return (
     <div className="container aw-admin" style={{ paddingTop: 56, paddingBottom: 120 }}>
       <Reveal>
-        <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
+        <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
             <Eyebrow>Admin · Internal</Eyebrow>
             <h1 className="text-white text-[28px] md:text-[34px] font-bold tracking-tight mt-2">
@@ -325,204 +336,232 @@ function AdminDashboard() {
             Generate manual token
           </Button>
         </div>
-      </Reveal>
 
-      {/* ---------- Stats grid ---------- */}
-      <Reveal>
-        <div className="aw-admin-stats mb-8">
-          <Stat label="Total scans" value={scans.length * 632 + 1241} />
-          <Stat label="Scans today" value={todayCount * 47 + 12} />
-          <Stat label="Active users" value={uniqueUsers * 214} />
-          <Stat label="Paid conversions" value={218} suffix=" / mo" />
+        {/* Tab bar */}
+        <div className="flex gap-1 mb-8 border-b" style={{ borderColor: "#1a1a1a" }}>
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className="px-4 py-2.5 text-[13px] font-medium transition-colors"
+              style={{
+                color: activeTab === t.id ? "var(--accent)" : "var(--fg-tertiary)",
+                borderBottom: activeTab === t.id ? "2px solid var(--accent)" : "2px solid transparent",
+                marginBottom: -1,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </Reveal>
 
-      {/* ---------- Top chains ---------- */}
-      <Reveal>
-        <Card hover>
-          <div className="aw-card-head">
-            <Eyebrow>Top chains · last 30 days</Eyebrow>
-            <span className="aw-meta">{CHAINS.length} tracked</span>
-          </div>
-          <div className="flex flex-col gap-3">
-            {chainBreakdown.map((c) => (
-              <div key={c.code} className="aw-chain-row">
-                <div className="aw-chain-row-l">
-                  <ChainLogo code={c.code} size={16} />
-                  <span className="text-white text-[13px] font-medium">
-                    {c.name}
-                  </span>
-                  {c.beta && <Chip tone="beta">Beta</Chip>}
-                </div>
-                <div
-                  className="flex-1 h-2 rounded-full overflow-hidden"
-                  style={{ background: "#151515" }}
-                >
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${c.pct}%`,
-                      background: c.color,
-                      transition: "width 900ms cubic-bezier(0.16, 1, 0.3, 1)",
-                    }}
+      {/* ========== Operations tab ========== */}
+      {activeTab === "ops" && (
+        <>
+          <Reveal>
+            <div className="aw-admin-stats mb-8">
+              <Stat label="Total scans" value={scans.length * 632 + 1241} />
+              <Stat label="Scans today" value={todayCount * 47 + 12} />
+              <Stat label="Active users" value={uniqueUsers * 214} />
+              <Stat label="Paid conversions" value={218} suffix=" / mo" />
+            </div>
+          </Reveal>
+
+          <Reveal>
+            <Card hover>
+              <div className="aw-card-head">
+                <Eyebrow>Top chains · last 30 days</Eyebrow>
+                <span className="aw-meta">{CHAINS.length} tracked</span>
+              </div>
+              <div className="flex flex-col gap-3">
+                {chainBreakdown.map((c) => (
+                  <div key={c.code} className="aw-chain-row">
+                    <div className="aw-chain-row-l">
+                      <ChainLogo code={c.code} size={16} />
+                      <span className="text-white text-[13px] font-medium">
+                        {c.name}
+                      </span>
+                      {c.beta && <Chip tone="beta">Beta</Chip>}
+                    </div>
+                    <div
+                      className="flex-1 h-2 rounded-full overflow-hidden"
+                      style={{ background: "#151515" }}
+                    >
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${c.pct}%`,
+                          background: c.color,
+                          transition: "width 900ms cubic-bezier(0.16, 1, 0.3, 1)",
+                        }}
+                      />
+                    </div>
+                    <div className="mono text-[12px] text-[color:var(--fg-tertiary)] w-20 text-right">
+                      {c.count.toLocaleString()} scans
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </Reveal>
+
+          <Reveal>
+            <Card className="aw-table-card mt-6">
+              <div className="aw-card-head flex-wrap gap-3">
+                <Eyebrow>All scans · {filteredScans.length}</Eyebrow>
+                <div className="aw-input aw-input-sm" style={{ maxWidth: 280 }}>
+                  <Search className="aw-input-icon" />
+                  <input
+                    placeholder="Search address, user or chain…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
                   />
-                </div>
-                <div className="mono text-[12px] text-[color:var(--fg-tertiary)] w-20 text-right">
-                  {c.count.toLocaleString()} scans
+                  {query && (
+                    <button
+                      className="aw-input-clear"
+                      onClick={() => setQuery("")}
+                      aria-label="Clear"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        </Card>
-      </Reveal>
 
-      {/* ---------- All scans ---------- */}
-      <Reveal>
-        <Card className="aw-table-card mt-6">
-          <div className="aw-card-head flex-wrap gap-3">
-            <Eyebrow>All scans · {filteredScans.length}</Eyebrow>
-            <div className="aw-input aw-input-sm" style={{ maxWidth: 280 }}>
-              <Search className="aw-input-icon" />
-              <input
-                placeholder="Search address, user or chain…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              {query && (
-                <button
-                  className="aw-input-clear"
-                  onClick={() => setQuery("")}
-                  aria-label="Clear"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="aw-tbl">
-            <div
-              className="aw-tbl-head"
-              style={{ gridTemplateColumns: "1.6fr 0.7fr 0.7fr 1.2fr 0.9fr" }}
-            >
-              <SortHeader label="Wallet" active={sortKey === "addr"} dir={sortDir} onClick={() => toggleSort("addr")} />
-              <SortHeader label="Chain" active={sortKey === "chain"} dir={sortDir} onClick={() => toggleSort("chain")} />
-              <SortHeader label="Score" active={sortKey === "score"} dir={sortDir} onClick={() => toggleSort("score")} />
-              <SortHeader
-                label="User"
-                active={sortKey === "email"}
-                dir={sortDir}
-                onClick={() => toggleSort("email")}
-                className="aw-tbl-hide-sm"
-              />
-              <SortHeader
-                label="Time"
-                active={sortKey === "ts"}
-                dir={sortDir}
-                onClick={() => toggleSort("ts")}
-                align="right"
-              />
-            </div>
-
-            {filteredScans.slice(0, 25).map((row) => {
-              const risk = riskFromScore(row.score);
-              return (
+              <div className="aw-tbl">
                 <div
-                  key={row.id}
-                  className="aw-tbl-row"
+                  className="aw-tbl-head"
                   style={{ gridTemplateColumns: "1.6fr 0.7fr 0.7fr 1.2fr 0.9fr" }}
                 >
-                  <div className="mono aw-addr truncate">
-                    {row.addr.slice(0, 10)}…{row.addr.slice(-6)}
-                  </div>
-                  <div>
-                    <ChainBadge chain={row.chain} />
-                  </div>
-                  <div>
-                    <Chip tone={risk.tone} dot>
-                      {Math.round(row.score)}
-                    </Chip>
-                  </div>
-                  <div className="aw-tbl-hide-sm text-[color:var(--fg-secondary)] truncate">
-                    {row.email}
-                  </div>
-                  <div className="aw-tbl-time" style={{ textAlign: "right" }}>
-                    {relTime(row.ts)}
-                  </div>
-                </div>
-              );
-            })}
-            {filteredScans.length === 0 && (
-              <div className="py-10 text-center text-[13px] text-[color:var(--fg-tertiary)]">
-                No scans match "{query}".
-              </div>
-            )}
-          </div>
-        </Card>
-      </Reveal>
-
-      {/* ---------- License tokens ---------- */}
-      <Reveal>
-        <Card className="mt-6">
-          <div className="aw-card-head flex-wrap gap-3">
-            <Eyebrow>License tokens · {filteredTokens.length}</Eyebrow>
-            <div className="flex items-center gap-1 flex-wrap">
-              {(["all", "unused", "used"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setTokenFilter(f)}
-                  className={`aw-tok-pill ${tokenFilter === f ? "active" : ""}`}
-                >
-                  {f}
-                </button>
-              ))}
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={Plus}
-                onClick={() => setShowGen(true)}
-              >
-                New
-              </Button>
-            </div>
-          </div>
-
-          <div className="aw-tok-list">
-            {filteredTokens.map((row) => (
-              <div key={row.code} className="aw-tok-row">
-                <span className="mono text-[13px] text-white aw-tok-code">
-                  {row.code}
-                </span>
-                <Chip tone={row.plan === "Business" ? "info" : "safe"}>
-                  {row.plan}
-                </Chip>
-                <Chip tone={row.used ? "neutral" : ("solid" as any)}>
-                  {row.used ? "Used" : "Unused"}
-                </Chip>
-                <span className="text-[12px] text-[color:var(--fg-secondary)] truncate aw-tok-email">
-                  {row.email || "—"}
-                </span>
-                <span className="text-[12px] mono text-[color:var(--fg-tertiary)] aw-tok-when">
-                  {row.when}
-                </span>
-                <div className="flex items-center justify-end gap-1">
-                  <IconBtn
-                    icon={Copy}
-                    aria-label="Copy"
-                    onClick={() => navigator.clipboard.writeText(row.code)}
+                  <SortHeader label="Wallet" active={sortKey === "addr"} dir={sortDir} onClick={() => toggleSort("addr")} />
+                  <SortHeader label="Chain" active={sortKey === "chain"} dir={sortDir} onClick={() => toggleSort("chain")} />
+                  <SortHeader label="Score" active={sortKey === "score"} dir={sortDir} onClick={() => toggleSort("score")} />
+                  <SortHeader
+                    label="User"
+                    active={sortKey === "email"}
+                    dir={sortDir}
+                    onClick={() => toggleSort("email")}
+                    className="aw-tbl-hide-sm"
                   />
-                  <IconBtn icon={Mail} aria-label="Re-send email" />
+                  <SortHeader
+                    label="Time"
+                    active={sortKey === "ts"}
+                    dir={sortDir}
+                    onClick={() => toggleSort("ts")}
+                    align="right"
+                  />
+                </div>
+
+                {filteredScans.slice(0, 25).map((row) => {
+                  const risk = riskFromScore(row.score);
+                  return (
+                    <div
+                      key={row.id}
+                      className="aw-tbl-row"
+                      style={{ gridTemplateColumns: "1.6fr 0.7fr 0.7fr 1.2fr 0.9fr" }}
+                    >
+                      <div className="mono aw-addr truncate">
+                        {row.addr.slice(0, 10)}…{row.addr.slice(-6)}
+                      </div>
+                      <div>
+                        <ChainBadge chain={row.chain} />
+                      </div>
+                      <div>
+                        <Chip tone={risk.tone} dot>
+                          {Math.round(row.score)}
+                        </Chip>
+                      </div>
+                      <div className="aw-tbl-hide-sm text-[color:var(--fg-secondary)] truncate">
+                        {row.email}
+                      </div>
+                      <div className="aw-tbl-time" style={{ textAlign: "right" }}>
+                        {relTime(row.ts)}
+                      </div>
+                    </div>
+                  );
+                })}
+                {filteredScans.length === 0 && (
+                  <div className="py-10 text-center text-[13px] text-[color:var(--fg-tertiary)]">
+                    No scans match "{query}".
+                  </div>
+                )}
+              </div>
+            </Card>
+          </Reveal>
+
+          <Reveal>
+            <Card className="mt-6">
+              <div className="aw-card-head flex-wrap gap-3">
+                <Eyebrow>License tokens · {filteredTokens.length}</Eyebrow>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {(["all", "unused", "used"] as const).map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setTokenFilter(f)}
+                      className={`aw-tok-pill ${tokenFilter === f ? "active" : ""}`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={Plus}
+                    onClick={() => setShowGen(true)}
+                  >
+                    New
+                  </Button>
                 </div>
               </div>
-            ))}
-            {filteredTokens.length === 0 && (
-              <div className="py-10 text-center text-[13px] text-[color:var(--fg-tertiary)]">
-                No tokens.
+
+              <div className="aw-tok-list">
+                {filteredTokens.map((row) => (
+                  <div key={row.code} className="aw-tok-row">
+                    <span className="mono text-[13px] text-white aw-tok-code">
+                      {row.code}
+                    </span>
+                    <Chip tone={row.plan === "Business" ? "info" : "safe"}>
+                      {row.plan}
+                    </Chip>
+                    <Chip tone={row.used ? "neutral" : ("solid" as any)}>
+                      {row.used ? "Used" : "Unused"}
+                    </Chip>
+                    <span className="text-[12px] text-[color:var(--fg-secondary)] truncate aw-tok-email">
+                      {row.email || "—"}
+                    </span>
+                    <span className="text-[12px] mono text-[color:var(--fg-tertiary)] aw-tok-when">
+                      {row.when}
+                    </span>
+                    <div className="flex items-center justify-end gap-1">
+                      <IconBtn
+                        icon={Copy}
+                        aria-label="Copy"
+                        onClick={() => navigator.clipboard.writeText(row.code)}
+                      />
+                      <IconBtn icon={Mail} aria-label="Re-send email" />
+                    </div>
+                  </div>
+                ))}
+                {filteredTokens.length === 0 && (
+                  <div className="py-10 text-center text-[13px] text-[color:var(--fg-tertiary)]">
+                    No tokens.
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </Card>
-      </Reveal>
+            </Card>
+          </Reveal>
+        </>
+      )}
+
+      {/* ========== Usage Stats tab ========== */}
+      {activeTab === "stats" && <UsageStatsTab getToken={getToken} />}
+
+      {/* ========== API Monitor tab ========== */}
+      {activeTab === "monitor" && <ApiMonitorTab getToken={getToken} />}
+
+      {/* ========== Announcements tab ========== */}
+      {activeTab === "announcements" && <AnnouncementsTab getToken={getToken} />}
 
       {/* ---------- Generate token modal ---------- */}
       {showGen && (
@@ -583,6 +622,360 @@ function AdminDashboard() {
   );
 }
 
+// ---------- Usage Stats Tab ----------
+interface StatsData {
+  today: number;
+  week: number;
+  month: number;
+  chains: Record<string, number>;
+  active_users: number;
+}
+
+function UsageStatsTab({ getToken }: { getToken: () => Promise<string | null> }) {
+  const [data, setData] = useState<StatsData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    getToken()
+      .then(async (token) => {
+        const r = await fetch("/api/admin/stats", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const d = await r.json();
+        if (d.success) setData(d);
+        else setError(d.error ?? "Failed to load stats.");
+      })
+      .catch(() => setError("Network error."))
+      .finally(() => setLoading(false));
+  }, [getToken]);
+
+  if (loading) return <LoadingState />;
+  if (error) return <ErrorState message={error} />;
+  if (!data) return null;
+
+  const chainEntries = Object.entries(data.chains).sort((a, b) => b[1] - a[1]);
+  const maxChain = Math.max(...chainEntries.map((e) => e[1]), 1);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <Reveal>
+        <div className="grid sm:grid-cols-3 gap-4">
+          <StatCard label="Scans today" value={data.today} />
+          <StatCard label="Scans this week" value={data.week} />
+          <StatCard label="Scans this month" value={data.month} />
+        </div>
+      </Reveal>
+
+      <Reveal>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Card hover>
+            <Eyebrow>Active users · last 7 days</Eyebrow>
+            <div className="text-white font-bold mt-3 tracking-tight mono text-[40px]">
+              <CountUp to={data.active_users} />
+            </div>
+          </Card>
+
+          <Card hover>
+            <div className="aw-card-head mb-4">
+              <Eyebrow>Scans by chain</Eyebrow>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              {chainEntries.map(([chain, count]) => (
+                <div key={chain} className="flex items-center gap-3">
+                  <span className="mono text-[12px] text-white w-10 uppercase">{chain}</span>
+                  <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#151515" }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.round((count / maxChain) * 100)}%`,
+                        background: "var(--accent)",
+                        transition: "width 700ms cubic-bezier(0.16, 1, 0.3, 1)",
+                      }}
+                    />
+                  </div>
+                  <span className="mono text-[12px] text-[color:var(--fg-tertiary)] w-10 text-right">
+                    {count}
+                  </span>
+                </div>
+              ))}
+              {chainEntries.length === 0 && (
+                <p className="text-[13px] text-[color:var(--fg-tertiary)]">No scan data yet.</p>
+              )}
+            </div>
+          </Card>
+        </div>
+      </Reveal>
+    </div>
+  );
+}
+
+// ---------- API Monitor Tab ----------
+interface ServiceRow {
+  name: string;
+  calls_today: number;
+  limit: number | null;
+}
+
+function ApiMonitorTab({ getToken }: { getToken: () => Promise<string | null> }) {
+  const [services, setServices] = useState<ServiceRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    getToken()
+      .then(async (token) => {
+        const r = await fetch("/api/admin/api-monitor", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const d = await r.json();
+        if (d.success) setServices(d.services);
+        else setError(d.error ?? "Failed to load monitor data.");
+      })
+      .catch(() => setError("Network error."))
+      .finally(() => setLoading(false));
+  }, [getToken]);
+
+  if (loading) return <LoadingState />;
+  if (error) return <ErrorState message={error} />;
+
+  return (
+    <Reveal>
+      <Card>
+        <div className="aw-card-head mb-4">
+          <Eyebrow>API usage · today</Eyebrow>
+        </div>
+        <div className="aw-tbl">
+          <div
+            className="aw-tbl-head"
+            style={{ gridTemplateColumns: "1.5fr 1fr 1fr 80px" }}
+          >
+            <div>Service</div>
+            <div>Calls today</div>
+            <div>Daily limit</div>
+            <div style={{ textAlign: "right" }}>Status</div>
+          </div>
+          {services.map((svc) => {
+            const pct = svc.limit ? (svc.calls_today / svc.limit) * 100 : 0;
+            const status = svc.limit === null ? "ok" : pct >= 80 ? "warn" : "ok";
+            return (
+              <div
+                key={svc.name}
+                className="aw-tbl-row"
+                style={{ gridTemplateColumns: "1.5fr 1fr 1fr 80px" }}
+              >
+                <div className="text-white text-[13px] font-medium">{svc.name}</div>
+                <div className="mono text-[13px]">{svc.calls_today.toLocaleString()}</div>
+                <div className="mono text-[12px] text-[color:var(--fg-tertiary)]">
+                  {svc.limit ? svc.limit.toLocaleString() : "—"}
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <span
+                    className="inline-block w-2 h-2 rounded-full"
+                    style={{ background: status === "warn" ? "#F5A623" : "#1D9E75" }}
+                    title={status === "warn" ? `${Math.round(pct)}% of limit used` : "OK"}
+                  />
+                </div>
+              </div>
+            );
+          })}
+          {services.length === 0 && (
+            <div className="py-10 text-center text-[13px] text-[color:var(--fg-tertiary)]">
+              No data available.
+            </div>
+          )}
+        </div>
+      </Card>
+    </Reveal>
+  );
+}
+
+// ---------- Announcements Tab ----------
+interface AnnouncementRow {
+  id: string;
+  message: string;
+  active: boolean;
+  created_at: string;
+  expires_at: string | null;
+}
+
+function AnnouncementsTab({ getToken }: { getToken: () => Promise<string | null> }) {
+  const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState("");
+
+  const fetchAnnouncements = async () => {
+    setLoading(true);
+    try {
+      const token = await getToken();
+      const r = await fetch("/api/admin/announcements", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const d = await r.json();
+      if (d.success) setAnnouncements(d.announcements ?? []);
+      else setError(d.error ?? "Failed to load announcements.");
+    } catch {
+      setError("Network error.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchAnnouncements(); }, []);
+
+  const handlePost = async () => {
+    setPostError("");
+    if (!message.trim()) return;
+    setPosting(true);
+    try {
+      const token = await getToken();
+      const r = await fetch("/api/admin/announcements", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ message: message.trim(), expires_at: expiresAt || undefined }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setMessage("");
+        setExpiresAt("");
+        fetchAnnouncements();
+      } else {
+        setPostError(d.error ?? "Failed to post.");
+      }
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const handleDeactivate = async (id: string) => {
+    const token = await getToken();
+    await fetch(`/api/admin/announcements/${id}`, {
+      method: "PATCH",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    fetchAnnouncements();
+  };
+
+  const getStatus = (a: AnnouncementRow): { label: string; tone: "safe" | "neutral" | "medium" } => {
+    if (!a.active) return { label: "Deactivated", tone: "neutral" };
+    if (a.expires_at && new Date(a.expires_at) < new Date()) return { label: "Expired", tone: "medium" };
+    return { label: "Active", tone: "safe" };
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <Reveal>
+        <Card hover>
+          <div className="aw-card-head mb-4">
+            <Eyebrow>Post announcement</Eyebrow>
+            <Megaphone className="w-4 h-4 text-[color:var(--fg-tertiary)]" />
+          </div>
+          <div className="flex flex-col gap-3">
+            <textarea
+              className="aw-input"
+              style={{ minHeight: 80, resize: "vertical", padding: "10px 12px" }}
+              placeholder="Announcement message…"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+            <div className="flex gap-3 items-center flex-wrap">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] text-[color:var(--fg-tertiary)]">
+                  Expires at (optional)
+                </label>
+                <input
+                  type="datetime-local"
+                  className="aw-input"
+                  style={{ padding: "6px 10px", fontSize: 12 }}
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                />
+              </div>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={handlePost}
+                disabled={posting || !message.trim()}
+                style={{ alignSelf: "flex-end" }}
+              >
+                {posting ? "Posting…" : "Post Announcement"}
+              </Button>
+            </div>
+            {postError && (
+              <p className="text-[12px]" style={{ color: "#E53E3E" }}>{postError}</p>
+            )}
+          </div>
+        </Card>
+      </Reveal>
+
+      <Reveal>
+        <Card>
+          <div className="aw-card-head mb-4">
+            <Eyebrow>Past announcements</Eyebrow>
+          </div>
+          {loading ? (
+            <LoadingState />
+          ) : error ? (
+            <ErrorState message={error} />
+          ) : announcements.length === 0 ? (
+            <p className="text-[13px] text-[color:var(--fg-tertiary)] py-4">
+              No announcements yet.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {announcements.map((a) => {
+                const { label, tone } = getStatus(a);
+                return (
+                  <div
+                    key={a.id}
+                    className="flex items-start justify-between gap-4 py-3 border-t"
+                    style={{ borderColor: "#1a1a1a" }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] text-white mb-1">{a.message}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Chip tone={tone}>{label}</Chip>
+                        <span className="text-[11px] text-[color:var(--fg-tertiary)] mono">
+                          {new Date(a.created_at).toLocaleString("en-US", {
+                            month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                          })}
+                        </span>
+                        {a.expires_at && (
+                          <span className="text-[11px] text-[color:var(--fg-tertiary)]">
+                            Expires {new Date(a.expires_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {a.active && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleDeactivate(a.id)}
+                      >
+                        Deactivate
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      </Reveal>
+    </div>
+  );
+}
+
 // ---------- helpers ----------
 function relTime(ts: number) {
   const diff = Date.now() - ts;
@@ -612,6 +1005,33 @@ function Stat({
         {suffix}
       </div>
     </Card>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <Card hover>
+      <Eyebrow>{label}</Eyebrow>
+      <div className="text-white font-bold mt-3 tracking-tight mono text-[36px]">
+        <CountUp to={value} />
+      </div>
+    </Card>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="py-12 text-center text-[13px] text-[color:var(--fg-tertiary)]">
+      Loading…
+    </div>
+  );
+}
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <div className="py-12 text-center text-[13px]" style={{ color: "#E53E3E" }}>
+      {message}
+    </div>
   );
 }
 

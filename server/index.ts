@@ -18,6 +18,7 @@ import { scanRouter } from "./routes/scan.js";
 import { exportRouter } from "./routes/export.js";
 import { teamRouter } from "./routes/team.js";
 import { adminRouter } from "./routes/admin.js";
+import { announcementsRouter } from "./routes/announcements.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -93,6 +94,17 @@ const scanLimiter = rateLimit({
   message: { error: "Scan limit reached. Please wait before scanning again." },
 });
 
+// IP-based daily limiter for scan endpoint (anti-abuse across accounts)
+const ipDailyLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 15,
+  keyGenerator: (req) => req.ip ?? 'unknown',
+  message: { error: 'Daily limit reached from this network.', code: 'IP_LIMIT' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => !IS_PROD,
+});
+
 // Webhook limiter (Whop sends max 1 event per user action)
 const webhookLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -117,10 +129,11 @@ app.use(clerkMiddleware());
 
 // ─── API ROUTES ───────────────────────────────────────────────────────────────
 app.use("/api/redeem", redeemRouter);
-app.use("/api/scan", scanLimiter, scanRouter);
+app.use("/api/scan", ipDailyLimiter, scanLimiter, scanRouter);
 app.use("/api/export", exportRouter);
 app.use("/api/team", teamRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/announcements", announcementsRouter);
 
 // Health check — no auth needed
 app.get("/api/health", (_req, res) => {

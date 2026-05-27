@@ -9,7 +9,7 @@ import { Router } from "express";
 import { existsSync } from "fs";
 import chromium from "@sparticuz/chromium-min";
 import puppeteer from "puppeteer-core";
-import { requireAuth, requirePaidPlan, getEffectivePlan } from "../middleware/auth.js";
+import { requireAuth, requirePaidPlan, requireBusinessPlan, getEffectivePlan } from "../middleware/auth.js";
 
 export const exportRouter = Router();
 
@@ -240,6 +240,58 @@ exportRouter.get("/pdf", requireAuth, requirePaidPlan, async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="${address.slice(0, 10)}-report.html"`);
     return res.send(html);
   }
+});
+
+// ─── Bulk CSV endpoint (Business only) ───────────────────────────────────────
+exportRouter.get("/bulk-csv", requireAuth, requireBusinessPlan, async (req, res) => {
+  const userId = req.userId!;
+  const { start, end } = req.query as { start?: string; end?: string };
+
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return res.status(500).json({ error: "Server configuration error." });
+
+  const endDate = end ? new Date(end) : new Date();
+  const startDate = start
+    ? new Date(start)
+    : new Date(endDate.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return res.status(400).json({ error: "Invalid date format. Use ISO 8601." });
+  }
+
+  let endpoint = `${url}/rest/v1/wallet_scans?user_id=eq.${encodeURIComponent(userId)}&order=scanned_at.desc&select=id,address,chain,risk_score,risk_level,flags,label,scanned_at,ai_summary`;
+  endpoint += `&scanned_at=gte.${startDate.toISOString()}`;
+  endpoint += `&scanned_at=lte.${endDate.toISOString()}`;
+
+  const scansRes = await fetch(endpoint, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+  if (!scansRes.ok) return res.status(500).json({ error: "Failed to fetch scans." });
+
+  const scans = (await scansRes.json()) as Array<Record<string, unknown>>;
+
+  const header = ["scan_id", "address", "chain", "risk_score", "risk_level", "flags", "label", "scanned_at", "ai_summary"].join(",");
+  const rows = scans.map((s) =>
+    [
+      s.id ?? "",
+      `"${s.address ?? ""}"`,
+      s.chain ?? "",
+      s.risk_score ?? "",
+      s.risk_level ?? "",
+      `"${String(s.flags ?? "").replace(/"/g, '""')}"`,
+      `"${String(s.label ?? "").replace(/"/g, '""')}"`,
+      s.scanned_at ?? "",
+      `"${String(s.ai_summary ?? "").replace(/"/g, '""')}"`,
+    ].join(",")
+  );
+
+  const csv = [header, ...rows].join("\r\n");
+  const timestamp = new Date().toISOString().slice(0, 10);
+
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="altwallet-bulk-export-${timestamp}.csv"`);
+  return res.send(csv);
 });
 
 // ─── CSV endpoint ─────────────────────────────────────────────────────────────

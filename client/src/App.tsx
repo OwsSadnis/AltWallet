@@ -20,10 +20,12 @@ import Flagged from "./pages/Flagged";
 import Admin from "./pages/Admin";
 import History from "./pages/History";
 import { Terms, Privacy } from "./pages/Legal";
+import { AnnouncementBanner } from "./components/aw/AnnouncementBanner";
 
 function Router() {
   return (
     <Shell>
+      <AnnouncementBanner />
       <Switch>
         <Route path="/" component={Landing} />
         <Route path="/checker" component={Checker} />

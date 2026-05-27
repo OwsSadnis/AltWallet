@@ -5,6 +5,8 @@ import { ChainBadge } from "@/components/aw/ResultCards";
 import { CHAINS, ChainCode, riskFromScore, generateScan } from "@/lib/constants";
 import { Download, RotateCw, ExternalLink, Lock } from "lucide-react";
 import { useLocation } from "wouter";
+import { useUser } from "@clerk/clerk-react";
+import { TeamSeats } from "@/components/aw/TeamSeats";
 
 const DEMO_HISTORY = [
   { addr: "0x7a3f4b2cde918f2c88f09a7b4ce4e91c", chain: "ETH" as ChainCode, date: "Today · 14:22" },
@@ -17,6 +19,8 @@ const DEMO_HISTORY = [
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
+  const { user } = useUser();
+  const plan = (user?.publicMetadata?.plan as string) ?? "free";
 
   return (
     <div className="container" style={{ paddingTop: 64, paddingBottom: 120 }}>
@@ -126,10 +130,9 @@ export default function Dashboard() {
               <Eyebrow>Account settings</Eyebrow>
             </div>
             <div className="flex flex-col gap-3">
-              <Row label="Email" value="sasha@altwallet.id" />
+              <Row label="Email" value={user?.primaryEmailAddress?.emailAddress ?? "—"} />
               <Row label="Language" value="English" />
-              <Row label="Member since" value="Jan 2026" />
-              <Row label="Seats" value="1" />
+              <Row label="Plan" value={plan.charAt(0).toUpperCase() + plan.slice(1)} />
             </div>
           </Card>
           <Card hover>
@@ -161,6 +164,12 @@ export default function Dashboard() {
               ))}
             </div>
           </Card>
+        </div>
+      </Reveal>
+
+      <Reveal>
+        <div className="mt-8">
+          <TeamSeats plan={plan} />
         </div>
       </Reveal>
     </div>

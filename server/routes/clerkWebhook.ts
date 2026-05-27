@@ -141,8 +141,48 @@ clerkWebhookRouter.post(
     }
 
     if (type === "user.deleted") {
-      // Soft-delete or mark inactive — left as TODO until schema is confirmed
-      console.log(`[clerk-webhook] user.deleted: ${data.id}`);
+      const userId = data.id as string;
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (supabaseUrl && serviceKey) {
+        const headers = {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          "Content-Type": "application/json",
+        };
+
+        await Promise.all([
+          // Remove team memberships where user is owner or member
+          fetch(
+            `${supabaseUrl}/rest/v1/team_members?or=(user_id.eq.${encodeURIComponent(userId)},invited_by.eq.${encodeURIComponent(userId)})`,
+            { method: "DELETE", headers }
+          ),
+          // Delete scan history
+          fetch(
+            `${supabaseUrl}/rest/v1/wallet_scans?user_id=eq.${encodeURIComponent(userId)}`,
+            { method: "DELETE", headers }
+          ),
+          // Delete profile
+          fetch(
+            `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`,
+            { method: "DELETE", headers }
+          ),
+          // Unlink tokens (keep record, unlink user)
+          fetch(
+            `${supabaseUrl}/rest/v1/tokens?used_by=eq.${encodeURIComponent(userId)}`,
+            {
+              method: "PATCH",
+              headers,
+              body: JSON.stringify({ used_by: null }),
+            }
+          ),
+        ]);
+
+        console.log(`[clerk-webhook] User deleted and data purged: ${userId}`);
+      } else {
+        console.log(`[clerk-webhook] user.deleted: ${userId} (Supabase not configured, skipping purge)`);
+      }
     }
 
     return res.json({ received: true });
