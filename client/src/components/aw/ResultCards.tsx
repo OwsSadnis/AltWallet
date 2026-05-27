@@ -364,6 +364,13 @@ export function AiSummaryCard({
 // ---------------- Wallet vitals ----------------
 
 function parseWalletAge(age: string): { value: string; unit: string } {
+  // "Xy Zm" → convert to total months
+  const ym = age.match(/^(\d+)y\s+(\d+)m$/i);
+  if (ym) return { value: String(parseInt(ym[1]) * 12 + parseInt(ym[2])), unit: "months" };
+  // "Xy" with no months
+  const yo = age.match(/^(\d+)y$/i);
+  if (yo) return { value: String(parseInt(yo[1]) * 12), unit: "months" };
+  // "X months" or "X days"
   const m = age.match(/^(\d+)\s+(months?|days?)$/i);
   if (m) return { value: m[1], unit: m[2].toLowerCase().replace(/s$/, "") + "s" };
   return { value: age, unit: "" };
