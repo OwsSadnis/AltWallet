@@ -6,20 +6,51 @@
  */
 
 import { Router } from "express";
-import { createRequire } from "module";
+import { existsSync } from "fs";
+import chromium from "@sparticuz/chromium-min";
+import puppeteer from "puppeteer-core";
 import { requireAuth, requirePaidPlan, getEffectivePlan } from "../middleware/auth.js";
 
 export const exportRouter = Router();
 
-// html-pdf-node is CommonJS; load via createRequire in ESM context
-const require = createRequire(import.meta.url);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const htmlPdfNode = require("html-pdf-node") as {
-  generatePdf: (
-    file: { content: string },
-    options: { format?: string; printBackground?: boolean }
-  ) => Promise<Buffer>;
-};
+// Chromium pack URL must match the installed @sparticuz/chromium-min version
+const CHROMIUM_CDN = "https://github.com/Sparticuz/chromium/releases/download/v148.0.0/chromium-v148.0.0-pack.tar";
+
+// Common local Chrome paths for non-Vercel environments (dev/self-hosted)
+const LOCAL_CHROME_PATHS = [
+  "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+  "/usr/bin/google-chrome",
+  "/usr/bin/chromium-browser",
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+];
+
+async function getChromiumPath(): Promise<string> {
+  if (process.env.VERCEL) {
+    return chromium.executablePath(CHROMIUM_CDN);
+  }
+  const local = LOCAL_CHROME_PATHS.find(existsSync);
+  if (local) return local;
+  // Last resort: let chromium-min try the CDN even locally
+  return chromium.executablePath(CHROMIUM_CDN);
+}
+
+async function generatePdf(html: string): Promise<Buffer> {
+  const executablePath = await getChromiumPath();
+  const browser = await puppeteer.launch({
+    args: chromium.args,
+    executablePath,
+    headless: true,
+  });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "domcontentloaded" });
+    const pdf = await page.pdf({ format: "A4", printBackground: true });
+    return Buffer.from(pdf);
+  } finally {
+    await browser.close();
+  }
+}
 
 // ─── Supabase helpers ─────────────────────────────────────────────────────────
 async function fetchScanById(
@@ -199,10 +230,7 @@ exportRouter.get("/pdf", requireAuth, requirePaidPlan, async (req, res) => {
   const pdfFilename = `altwallet-${address.slice(0, 10)}-report.pdf`;
 
   try {
-    const pdfBuffer = await htmlPdfNode.generatePdf(
-      { content: html },
-      { format: "A4", printBackground: true }
-    );
+    const pdfBuffer = await generatePdf(html);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${pdfFilename}"`);
     return res.send(pdfBuffer);
