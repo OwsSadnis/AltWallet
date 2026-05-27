@@ -22,6 +22,8 @@ export const scanRouter = Router();
 
 const FREE_CHAINS = new Set(["ETH", "BTC"]);
 const FREE_DAILY_LIMIT = 3;
+const PRO_DAILY_LIMIT = 50;
+const BUSINESS_DAILY_LIMIT = 200;
 const VALID_CHAINS = new Set(["ETH", "BTC", "SOL", "TRX", "XRP", "SUI"]);
 const BETA_CHAINS = new Set(["XRP", "SUI"]);
 
@@ -112,6 +114,26 @@ scanRouter.post("/", requireAuth, async (req, res) => {
         code: "DAILY_LIMIT",
       });
     }
+  } else if (plan === "pro") {
+    const count = await getDailyCount(userId);
+    if (count >= PRO_DAILY_LIMIT) {
+      return res.status(429).json({
+        error: `Pro plan daily limit reached (${PRO_DAILY_LIMIT} scans/day).`,
+        limit: PRO_DAILY_LIMIT,
+        plan: "pro",
+        code: "DAILY_LIMIT",
+      });
+    }
+  } else if (plan === "business") {
+    const count = await getDailyCount(userId);
+    if (count >= BUSINESS_DAILY_LIMIT) {
+      return res.status(429).json({
+        error: `Business plan daily limit reached (${BUSINESS_DAILY_LIMIT} scans/day).`,
+        limit: BUSINESS_DAILY_LIMIT,
+        plan: "business",
+        code: "DAILY_LIMIT",
+      });
+    }
   }
 
   // ── Burst anomaly detection ───────────────────────────────────────────────
@@ -122,7 +144,11 @@ scanRouter.post("/", requireAuth, async (req, res) => {
 
   // ── Cache lookup ──────────────────────────────────────────────────────────
   const cached = getCached(address, chain);
-  if (cached) return res.json({ ...cached as object, fromCache: true, scanId: null, plan });
+  if (cached) {
+    const cachedScore = (cached as { score?: number }).score ?? 0;
+    const scanId = await saveScan(userId, address.trim(), chain, cachedScore, cached, label);
+    return res.json({ ...cached as object, fromCache: true, scanId, plan });
+  }
 
   // ── GoPlus security scan ─────────────────────────────────────────────────
   let goPlusResult;

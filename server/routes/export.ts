@@ -1,44 +1,77 @@
 /**
  * Export endpoints — Pro/Business only.
  *
- * GET /api/export/pdf?scanId=xxx   → printable HTML report (save as PDF via browser)
- * GET /api/export/csv              → CSV of user's full scan history
+ * GET /api/export/pdf?scanId=xxx   → PDF scan report
+ * GET /api/export/csv              → CSV of user's scan history (windowed by plan)
  */
 
 import { Router } from "express";
-import { requireAuth, requirePaidPlan } from "../middleware/auth.js";
+import { createRequire } from "module";
+import { requireAuth, requirePaidPlan, getEffectivePlan } from "../middleware/auth.js";
 
 export const exportRouter = Router();
+
+// html-pdf-node is CommonJS; load via createRequire in ESM context
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const htmlPdfNode = require("html-pdf-node") as {
+  generatePdf: (
+    file: { content: string },
+    options: { format?: string; printBackground?: boolean }
+  ) => Promise<Buffer>;
+};
 
 // ─── Supabase helpers ─────────────────────────────────────────────────────────
 async function fetchScanById(
   scanId: string,
-  userId: string
+  userId: string,
+  cutoffDate: Date | null
 ): Promise<Record<string, unknown> | null> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
 
-  const res = await fetch(
-    `${url}/rest/v1/wallet_scans?id=eq.${encodeURIComponent(scanId)}&user_id=eq.${encodeURIComponent(userId)}&select=*&limit=1`,
-    { headers: { apikey: key, Authorization: `Bearer ${key}` } }
-  );
+  let endpoint = `${url}/rest/v1/wallet_scans?id=eq.${encodeURIComponent(scanId)}&user_id=eq.${encodeURIComponent(userId)}&select=*&limit=1`;
+  if (cutoffDate) {
+    endpoint += `&scanned_at=gte.${cutoffDate.toISOString()}`;
+  }
+
+  const res = await fetch(endpoint, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
   if (!res.ok) return null;
   const rows = (await res.json()) as Array<Record<string, unknown>>;
   return rows[0] ?? null;
 }
 
-async function fetchAllScans(userId: string): Promise<Array<Record<string, unknown>>> {
+async function fetchAllScans(
+  userId: string,
+  cutoffDate: Date | null
+): Promise<Array<Record<string, unknown>>> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return [];
 
-  const res = await fetch(
-    `${url}/rest/v1/wallet_scans?user_id=eq.${encodeURIComponent(userId)}&order=scanned_at.desc&select=id,address,chain,risk_score,scanned_at`,
-    { headers: { apikey: key, Authorization: `Bearer ${key}` } }
-  );
+  let endpoint = `${url}/rest/v1/wallet_scans?user_id=eq.${encodeURIComponent(userId)}&order=scanned_at.desc&select=id,address,chain,risk_score,scanned_at`;
+  if (cutoffDate) {
+    endpoint += `&scanned_at=gte.${cutoffDate.toISOString()}`;
+  }
+
+  const res = await fetch(endpoint, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
   if (!res.ok) return [];
   return (await res.json()) as Array<Record<string, unknown>>;
+}
+
+function getPlanCutoff(plan: string): Date | null {
+  if (plan === "pro") {
+    return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  }
+  if (plan === "business") {
+    return new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  }
+  return null;
 }
 
 // ─── HTML report builder ──────────────────────────────────────────────────────
@@ -95,11 +128,9 @@ function buildPdfHtml(scan: Record<string, unknown>): string {
   tr:nth-child(even) td { background: #fafafa; }
   .ai-box { background: #f9f9f9; border-left: 3px solid #1D9E75; padding: 14px 16px; border-radius: 0 8px 8px 0; line-height: 1.7; color: #444; }
   .footer { margin-top: 48px; font-size: 11px; color: #aaa; border-top: 1px solid #eee; padding-top: 12px; }
-  .print-btn { position: fixed; top: 20px; right: 20px; background: #1D9E75; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
 </style>
 </head>
 <body>
-<button class="print-btn no-print" onclick="window.print()">Save as PDF</button>
 
 <div class="brand">ALTWALLET SECURITY REPORT</div>
 
@@ -122,9 +153,9 @@ function buildPdfHtml(scan: Record<string, unknown>): string {
 <section>
   <h2>Risk Flags &amp; Signals</h2>
   <table>
-    ${flagRows(redFlags, "#E53E3E", "🔴 Red")}
-    ${flagRows(yellowFlags, "#D97706", "🟡 Yellow")}
-    ${flagRows(greenSignals, "#1D9E75", "🟢 Green")}
+    ${flagRows(redFlags, "#E53E3E", "Red")}
+    ${flagRows(yellowFlags, "#D97706", "Yellow")}
+    ${flagRows(greenSignals, "#1D9E75", "Green")}
     ${redFlags.length + yellowFlags.length + greenSignals.length === 0
       ? '<tr><td colspan="3" style="padding:12px;color:#888">No risk findings detected.</td></tr>'
       : ""}
@@ -155,24 +186,41 @@ exportRouter.get("/pdf", requireAuth, requirePaidPlan, async (req, res) => {
     return res.status(400).json({ error: "scanId is required." });
   }
 
-  const scan = await fetchScanById(scanId, userId);
+  const plan = req.userPlan ?? (await getEffectivePlan(userId));
+  const cutoff = getPlanCutoff(plan);
+
+  const scan = await fetchScanById(scanId, userId, cutoff);
   if (!scan) {
-    return res.status(404).json({ error: "Scan not found or access denied." });
+    return res.status(404).json({ error: "Scan not found, access denied, or outside your plan's history window." });
   }
 
   const html = buildPdfHtml(scan);
   const address = (scan.address as string) ?? "wallet";
-  const filename = `altwallet-${address.slice(0, 10)}-report.html`;
+  const pdfFilename = `altwallet-${address.slice(0, 10)}-report.pdf`;
 
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  return res.send(html);
+  try {
+    const pdfBuffer = await htmlPdfNode.generatePdf(
+      { content: html },
+      { format: "A4", printBackground: true }
+    );
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${pdfFilename}"`);
+    return res.send(pdfBuffer);
+  } catch (err) {
+    console.error("[export] pdf generation failed, falling back to HTML:", err);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${address.slice(0, 10)}-report.html"`);
+    return res.send(html);
+  }
 });
 
 // ─── CSV endpoint ─────────────────────────────────────────────────────────────
 exportRouter.get("/csv", requireAuth, requirePaidPlan, async (req, res) => {
   const userId = req.userId!;
-  const scans = await fetchAllScans(userId);
+  const plan = req.userPlan ?? (await getEffectivePlan(userId));
+  const cutoff = getPlanCutoff(plan);
+
+  const scans = await fetchAllScans(userId, cutoff);
 
   const header = ["scan_id", "address", "chain", "risk_score", "scanned_at"].join(",");
   const rows = scans.map((s) =>
