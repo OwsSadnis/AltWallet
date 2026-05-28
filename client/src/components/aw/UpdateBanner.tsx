@@ -24,6 +24,7 @@ export function UpdateBanner() {
         width: "fit-content",
         maxWidth: 560,
         zIndex: 9999,
+        pointerEvents: "auto",
         background: "#1a1a1a",
         border: "1px solid #2a2a2a",
         borderRadius: 12,
@@ -34,8 +35,6 @@ export function UpdateBanner() {
         gap: 12,
         justifyContent: "space-between",
         padding: "12px 16px",
-        // Responsive width on small screens via inline calc fallback isn't possible,
-        // so we clamp via maxWidth + left/right padding on the viewport.
       }}
     >
       <span style={{ color: "#ccc", fontSize: 13, flexShrink: 1 }}>
@@ -53,6 +52,9 @@ export function UpdateBanner() {
             fontSize: 13,
             cursor: "pointer",
             whiteSpace: "nowrap",
+            pointerEvents: "auto",
+            position: "relative",
+            zIndex: 10000,
           }}
         >
           Refresh ↻

@@ -3,6 +3,7 @@
 // - Click-outside dismiss, escape-to-close, z-index above everything
 // - Beta badge inline for XRP / Sui
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CHAINS, ChainCode, CHAIN_MAP } from "@/lib/constants";
 import { CHAIN_LOGOS } from "@/lib/chainLogos";
 import { Button, Chip } from "./Primitives";
@@ -70,11 +71,19 @@ export function WalletInputBar({
   const [chain, setChain] = useState<ChainCode>(defaultChain);
   const [address, setAddress] = useState(defaultAddress);
   const [open, setOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      if (
+        !rootRef.current?.contains(e.target as Node) &&
+        !dropdownRef.current?.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -110,8 +119,15 @@ export function WalletInputBar({
     >
       {/* Chain selector */}
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (!open && triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            setDropdownPos({ top: rect.bottom + 8, left: rect.left });
+          }
+          setOpen((o) => !o);
+        }}
         className={cn(
           "flex items-center gap-2 rounded-full px-3 transition-colors shrink-0",
           "hover:bg-[#151515] text-white"
@@ -157,15 +173,16 @@ export function WalletInputBar({
         {label}
       </Button>
 
-      {open && (
+      {open && createPortal(
         <div
+          ref={dropdownRef}
           role="listbox"
           className="aw-fade-in"
           style={{
-            position: "absolute",
-            left: 0,
-            top: "calc(100% + 8px)",
-            zIndex: 200,
+            position: "fixed",
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            zIndex: 9999,
             minWidth: 260,
             padding: 6,
             backgroundColor: "#111111",
@@ -202,7 +219,8 @@ export function WalletInputBar({
               )}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
