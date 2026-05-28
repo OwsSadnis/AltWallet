@@ -57,7 +57,7 @@ export default function Landing() {
     <>
       {/* HERO */}
       <section
-        className="aw-hero-section relative overflow-hidden"
+        className="aw-hero-section relative overflow-x-hidden"
         style={{ paddingBottom: 96 }}
       >
         <div
