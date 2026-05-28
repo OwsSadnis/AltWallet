@@ -103,6 +103,24 @@ export function WalletInputBar({
     };
   }, []);
 
+  const detectChain = (val: string): ChainCode | null => {
+    const v = val.trim();
+    if (!v) return null;
+    if (v.startsWith("T") && v.length === 34) return "TRX";
+    if (v.startsWith("1") || v.startsWith("3") || v.startsWith("bc1")) return "BTC";
+    if (v.startsWith("r") && v.length >= 25 && v.length <= 35) return "XRP";
+    if (v.length === 66 && v.startsWith("0x")) return "SUI";
+    if (v.length >= 32 && v.length <= 44 && !v.startsWith("0x") && /^[1-9A-HJ-NP-Za-km-z]+$/.test(v)) return "SOL";
+    if (v.startsWith("0x") && v.length === 42) return "ETH";
+    return null;
+  };
+
+  const handleAddressChange = (val: string) => {
+    setAddress(val);
+    const detected = detectChain(val);
+    if (detected) setChain(detected);
+  };
+
   const handleSubmit = () => {
     if (!address.trim()) return;
     onSubmit(address.trim(), chain);
@@ -162,7 +180,7 @@ export function WalletInputBar({
           className="flex-1 min-w-0 bg-transparent outline-none mono text-[14px] text-white placeholder:text-[color:var(--fg-tertiary)]"
           placeholder={info.placeholder}
           value={address}
-          onChange={(e) => setAddress(e.target.value)}
+          onChange={(e) => handleAddressChange(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSubmit();
           }}
