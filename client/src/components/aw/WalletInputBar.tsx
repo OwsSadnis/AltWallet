@@ -160,12 +160,18 @@ export function WalletInputBar({
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 top-[calc(100%+8px)] z-[200] min-w-[260px] rounded-[12px] border p-1.5 aw-fade-in"
+          className="aw-fade-in"
           style={{
+            position: "absolute",
+            left: 0,
+            top: "calc(100% + 8px)",
+            zIndex: 200,
+            minWidth: 260,
+            padding: 6,
             backgroundColor: "#111111",
-            borderColor: "#2a2a2a",
+            border: "1px solid #2a2a2a",
             borderRadius: 12,
-            boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
           }}
         >
           {CHAINS.map((c) => (
