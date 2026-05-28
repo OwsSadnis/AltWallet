@@ -77,6 +77,13 @@ export function WalletInputBar({
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (!open) return;
+    const handleScroll = () => setOpen(false);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, [open]);
+
+  useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (
         !rootRef.current?.contains(e.target as Node) &&
