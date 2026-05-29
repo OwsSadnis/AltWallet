@@ -84,7 +84,7 @@ export const en: Record<string, string> = {
   "pricing.per_month": "/ month",
 
   "plan.free.name": "Free",
-  "plan.free.desc": "Try AltWallet with one scan per day.",
+  "plan.free.desc": "Try AltWallet with 3 scans per day.",
   "plan.free.cta": "Get Started Free",
 
   "plan.pro.name": "Pro",
@@ -95,7 +95,7 @@ export const en: Record<string, string> = {
   "plan.biz.desc": "For teams doing serious due diligence.",
   "plan.biz.cta": "Buy on Whop",
 
-  "feat.scans_1": "1 wallet scan / day",
+  "feat.scans_1": "3 wallet scans / day",
   "feat.scans_unlimited": "Unlimited scans",
   "feat.score_flags": "Risk score & flags",
   "feat.history_30": "30 days transaction history",
