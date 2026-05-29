@@ -73,6 +73,14 @@ export function Navbar() {
             </Link>
 
             <div className="aw-nav-links hidden md:flex">
+              {isSignedIn && (
+                <Link
+                  href="/dashboard"
+                  className={cn("aw-nav-link", isActive("/dashboard") && "active")}
+                >
+                  Dashboard
+                </Link>
+              )}
               {LINKS.map((l) => (
                 <Link
                   key={l.href}
@@ -176,6 +184,16 @@ export function Navbar() {
             </div>
 
             <nav className="flex flex-col">
+              {isSignedIn && (
+                <Link
+                  href="/dashboard"
+                  className={cn("aw-drawer-link", isActive("/dashboard") && "text-white")}
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  Dashboard
+                  <ArrowRight className="w-4 h-4 opacity-50" />
+                </Link>
+              )}
               {LINKS.map((l) => (
                 <Link
                   key={l.href}
