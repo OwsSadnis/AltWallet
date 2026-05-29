@@ -613,11 +613,13 @@ function RecentScansSection({
         </button>
       </div>
       <Card style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ overflowX: "auto" }}>
         {/* Table header */}
         <div
           className="grid px-5 border-b"
           style={{
             gridTemplateColumns: "40px minmax(0,1.4fr) minmax(0,1fr) 120px 130px 44px",
+            minWidth: 540,
             gap: 14,
             height: 40,
             alignItems: "center",
@@ -660,6 +662,7 @@ function RecentScansSection({
               style={{
                 gridTemplateColumns:
                   "40px minmax(0,1.4fr) minmax(0,1fr) 120px 130px 44px",
+                minWidth: 540,
                 gap: 14,
                 padding: "0 20px",
                 height: 58,
@@ -711,6 +714,7 @@ function RecentScansSection({
             </div>
           );
         })}
+        </div>
       </Card>
     </div>
   );
@@ -788,17 +792,17 @@ function ChainCoverageCard() {
           6 chains
         </span>
       </div>
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
         {CHAINS.map((c) => (
           <div
             key={c.code}
-            className="flex items-center gap-2.5 p-3 rounded-[8px] border"
+            className="flex items-center gap-2 p-2.5 rounded-[8px] border min-w-0"
             style={{ background: "#0E0E0E", borderColor: "#1a1a1a" }}
           >
-            <ChainLogo code={c.code} size={20} />
-            <span className="text-[13.5px] font-medium text-white">{c.code}</span>
+            <ChainLogo code={c.code} size={18} />
+            <span className="text-[13px] font-medium text-white shrink-0">{c.code}</span>
             {c.beta && (
-              <Chip tone="beta" className="ml-auto">
+              <Chip tone="beta" className="ml-auto shrink-0 text-[10px]">
                 BETA
               </Chip>
             )}
