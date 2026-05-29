@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Card, Chip, Eyebrow, Button } from "@/components/aw/Primitives";
 import { Reveal } from "@/components/aw/motion";
 import { ChainLogo } from "@/components/aw/WalletInputBar";
@@ -8,7 +9,7 @@ import { useDashboardStats, useRecentScans, useExportCSV } from "@/hooks/useDash
 import type { DashboardStats, RecentScan } from "@/types/dashboard";
 import { useUser, useClerk } from "@clerk/clerk-react";
 import { useLocation } from "wouter";
-import { Download, Plus, LogOut, ArrowUpRight, X, Check, ChevronDown } from "lucide-react";
+import { Download, Plus, LogOut, ArrowUpRight, X, Check, ChevronDown, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Types & helpers ──────────────────────────────────────────────────────────
@@ -268,9 +269,9 @@ function StatCard({
   );
 }
 
-// ─── Chain selector dropdown (for Quick Scan slots) ───────────────────────────
+// ─── Chain selector for Quick Scan slots (WalletInputBar style, left-side) ────
 
-function ChainSelectDropdown({
+function SlotChainSelector({
   value,
   onChange,
 }: {
@@ -278,7 +279,9 @@ function ChainSelectDropdown({
   onChange: (v: ChainOpt) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const options: Array<{ code: ChainOpt; label: string }> = [
     { code: "AUTO", label: "Auto-detect" },
@@ -286,79 +289,124 @@ function ChainSelectDropdown({
   ];
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    if (!open) return;
+    const handleScroll = () => setOpen(false);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, [open]);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (
+        !triggerRef.current?.contains(e.target as Node) &&
+        !dropdownRef.current?.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
+  const handleOpen = () => {
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 8, left: rect.left });
+    }
+    setOpen((o) => !o);
+  };
+
   return (
-    <div className="relative shrink-0" ref={ref}>
+    <>
       <button
+        ref={triggerRef}
         type="button"
-        className="flex items-center gap-2 h-[44px] px-3 rounded-[8px] border transition-colors text-white text-[13px] font-medium whitespace-nowrap"
-        style={{ background: "#161616", borderColor: "#1a1a1a" }}
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleOpen}
+        className="flex items-center gap-2 rounded-full px-3 transition-colors shrink-0 hover:bg-[#151515] text-white"
+        style={{ height: 48 }}
+        aria-haspopup="listbox"
+        aria-expanded={open}
       >
         {value !== "AUTO" ? (
-          <ChainLogo code={value as ChainCode} size={16} />
+          <ChainLogo code={value as ChainCode} size={18} />
         ) : (
-          <span className="w-4 h-4 flex items-center justify-center text-[color:var(--fg-tertiary)]">
-            ·
-          </span>
+          <span
+            className="inline-block rounded-full"
+            style={{ width: 18, height: 18, background: "#2a2a2a", flexShrink: 0 }}
+            aria-hidden
+          />
         )}
-        <span>{value === "AUTO" ? "Auto" : value}</span>
+        <span className="font-semibold text-sm tracking-tight">
+          {value === "AUTO" ? "Auto" : value}
+        </span>
         <ChevronDown
           className={cn(
-            "w-3.5 h-3.5 text-[color:var(--fg-tertiary)] transition-transform shrink-0",
+            "w-3.5 h-3.5 text-[color:var(--fg-tertiary)] transition-transform",
             open && "rotate-180"
           )}
-          style={{ strokeWidth: 2 }}
         />
       </button>
-      {open && (
-        <div
-          className="absolute top-[calc(100%+6px)] right-0 z-50 min-w-[170px] p-1.5 flex flex-col gap-0.5"
-          style={{
-            background: "#111",
-            border: "1px solid #2a2a2a",
-            borderRadius: 8,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
-          }}
-        >
-          {options.map((o) => (
-            <button
-              key={o.code}
-              type="button"
-              className={cn(
-                "flex items-center gap-2.5 w-full px-2.5 py-2 rounded-[6px] text-[13px] text-white transition-colors text-left",
-                value === o.code ? "bg-[#151515]" : "hover:bg-[#151515]"
-              )}
-              onClick={() => {
-                onChange(o.code);
-                setOpen(false);
-              }}
-            >
-              {o.code !== "AUTO" ? (
-                <ChainLogo code={o.code as ChainCode} size={16} />
-              ) : (
-                <span className="w-4 h-4 flex items-center justify-center text-[color:var(--fg-tertiary)] text-xs">
-                  ·
+      {open &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            role="listbox"
+            className="aw-fade-in"
+            style={{
+              position: "fixed",
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+              zIndex: 9999,
+              minWidth: 220,
+              padding: 6,
+              backgroundColor: "#111111",
+              border: "1px solid #2a2a2a",
+              borderRadius: 12,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
+            }}
+          >
+            {options.map((o) => (
+              <button
+                key={o.code}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange(o.code);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                  value === o.code ? "bg-[#151515]" : "hover:bg-[#151515]"
+                )}
+                role="option"
+                aria-selected={value === o.code}
+              >
+                {o.code !== "AUTO" ? (
+                  <ChainLogo code={o.code as ChainCode} size={20} />
+                ) : (
+                  <span
+                    className="inline-block rounded-full"
+                    style={{ width: 20, height: 20, background: "#2a2a2a", flexShrink: 0 }}
+                    aria-hidden
+                  />
+                )}
+                <span className="text-white text-[13px] font-medium flex-1">{o.label}</span>
+                <span className="text-[11px] text-[color:var(--fg-tertiary)] mono">
+                  {o.code}
                 </span>
-              )}
-              <span className="flex-1">{o.label}</span>
-              {value === o.code && (
-                <Check
-                  className="w-3.5 h-3.5 text-[color:var(--accent)]"
-                  style={{ strokeWidth: 2 }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
+    </>
   );
 }
 
@@ -410,39 +458,45 @@ function QuickScanCard({
       <div className="flex flex-col gap-2.5">
         {slots.map((slot, i) => (
           <div key={slot.id} className="flex gap-2.5 items-center">
-            {/* Address input — matches WalletInputBar inner styling, no icon */}
+            {/* Pill container — exact WalletInputBar layout */}
             <div
-              className="flex-1 relative flex items-center rounded-[8px] border transition-colors bg-[color:var(--bg-inset)] focus-within:border-[color:var(--accent)] focus-within:shadow-[0_0_0_3px_var(--accent-ghost)]"
-              style={{ borderColor: "#1a1a1a", height: 44, padding: "0 14px" }}
+              className="aw-wallet-bar flex-1 relative overflow-visible flex items-center gap-2 rounded-full border transition-colors bg-[color:var(--bg-inset)] focus-within:border-[color:var(--accent)] focus-within:shadow-[0_0_0_3px_var(--accent-ghost)]"
+              style={{ borderColor: "#1a1a1a", padding: 6, height: 60 }}
             >
-              <input
-                ref={i === 0 ? scanRef : undefined}
-                className="flex-1 min-w-0 bg-transparent outline-none mono text-[14px] text-white placeholder:text-[color:var(--fg-tertiary)]"
-                placeholder="Paste wallet address..."
-                value={slot.addr}
-                onChange={(e) => update(slot.id, { addr: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleScan();
-                }}
+              <SlotChainSelector
+                value={slot.chain}
+                onChange={(c) => update(slot.id, { chain: c })}
               />
+              <div className="w-px h-7 bg-[#1a1a1a] shrink-0" aria-hidden />
+              <div className="flex-1 flex items-center px-3 min-w-0 self-stretch">
+                <input
+                  ref={i === 0 ? scanRef : undefined}
+                  className="flex-1 min-w-0 bg-transparent outline-none mono text-[14px] text-white placeholder:text-[color:var(--fg-tertiary)]"
+                  placeholder="Paste wallet address..."
+                  value={slot.addr}
+                  onChange={(e) => update(slot.id, { addr: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleScan();
+                  }}
+                />
+              </div>
+              {i === 0 && (
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={handleScan}
+                  disabled={!slot.addr.trim()}
+                  trailingIcon={ArrowRight}
+                  className="aw-wallet-bar-cta shrink-0 self-center"
+                >
+                  Scan
+                </Button>
+              )}
             </div>
-            <ChainSelectDropdown
-              value={slot.chain}
-              onChange={(c) => update(slot.id, { chain: c })}
-            />
-            {i === 0 ? (
-              <Button
-                variant="primary"
-                size="md"
-                onClick={handleScan}
-                style={{ height: 44, padding: "0 22px", flexShrink: 0 }}
-              >
-                Scan
-              </Button>
-            ) : (
+            {i > 0 && (
               <button
                 type="button"
-                className="w-[44px] h-[44px] shrink-0 rounded-[8px] border flex items-center justify-center text-[color:var(--fg-tertiary)] transition-colors hover:text-[#E5484D] hover:border-[#2a2a2a] hover:bg-[color:var(--bg-inset)]"
+                className="w-[44px] h-[44px] shrink-0 rounded-full border flex items-center justify-center text-[color:var(--fg-tertiary)] transition-colors hover:text-[#E5484D] hover:border-[#2a2a2a] hover:bg-[color:var(--bg-inset)]"
                 style={{ borderColor: "#1a1a1a" }}
                 onClick={() => removeSlot(slot.id)}
                 title="Remove wallet"
