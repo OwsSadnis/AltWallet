@@ -1,353 +1,198 @@
-// Admin operations dashboard — server-side auth via /api/admin/users (requireAdmin middleware).
-import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
+import { Redirect } from "wouter";
 import {
-  Card,
-  Chip,
-  Eyebrow,
-  Button,
-  IconBtn,
-} from "@/components/aw/Primitives";
-import { Reveal, CountUp } from "@/components/aw/motion";
-import { ChainBadge } from "@/components/aw/ResultCards";
-import { ChainLogo } from "@/components/aw/WalletInputBar";
-import {
-  ChainCode,
-  CHAINS,
-  riskFromScore,
-  generateScan,
-} from "@/lib/constants";
-import {
-  Plus,
   Search,
-  Mail,
   Copy,
-  ChevronUp,
-  ChevronDown,
-  X,
-  Shield,
   Check,
-  Megaphone,
+  X,
+  AlertTriangle,
+  Send,
+  Shield,
+  Plus,
 } from "lucide-react";
+import { Card, Chip, Eyebrow, Button } from "@/components/aw/Primitives";
+import { Reveal, CountUp } from "@/components/aw/motion";
 
-// ---------- Seed data (scans/stats only — tokens loaded from API) ----------
-type ScanRow = {
-  id: string;
-  addr: string;
-  chain: ChainCode;
-  email: string;
-  ts: number;
-  score: number;
-};
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const ADDRS: Record<ChainCode, string[]> = {
-  ETH: [
-    "0x7a3f4b2cde918f2c88f09a7b4ce4e91c8d1a2a94",
-    "0x3b9aca00e1a24c21c89f57a9d88e7bb3dc1f0c5a",
-    "0x52908400098527886e0f7030069857d2e4169ee7",
-    "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae",
-  ],
-  BTC: [
-    "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-    "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy",
-    "bc1q9h7rj0yf8p0xtk2xzg5n67w8dyaqe3l5s9mh8k",
-  ],
-  SOL: [
-    "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
-    "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
-  ],
-  TRX: [
-    "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL",
-    "TKHuVq1oKVruCGLvqVexFs6dawKv6fQgFs",
-  ],
-  XRP: ["rLNaPoKeeBjZe2qs6x52yVPZpZ8td4dc6w"],
-  SUI: ["0x2::sui::SUI0x9b7e8fb6c0e3ab21dca90a4b7f0bcd"],
-};
+type Tab = "users" | "generator" | "history" | "usage" | "api" | "announcements";
 
-const EMAILS = [
-  "sasha@altwallet.id",
-  "leo@acme.co",
-  "amir@studio.dev",
-  "user@web3.fi",
-  "hana@altwallet.id",
-  "min@alpha.xyz",
-  "rk@defi-research.com",
-  "j.dae@sentinel.io",
-  "research@northlab.io",
-  "team@altwallet.id",
-];
-
-function seedScans(): ScanRow[] {
-  const rows: ScanRow[] = [];
-  const now = Date.now();
-  let idx = 0;
-  for (const chain of Object.keys(ADDRS) as ChainCode[]) {
-    for (const a of ADDRS[chain]) {
-      const ageMin = Math.floor(5 + Math.random() * 60 * 24 * 40);
-      const ts = now - ageMin * 60_000;
-      const s = generateScan(a, chain);
-      rows.push({
-        id: `scan-${idx++}`,
-        addr: a,
-        chain,
-        email: EMAILS[idx % EMAILS.length],
-        ts,
-        score: s.score,
-      });
-    }
-  }
-  for (let i = 0; i < 10; i++) {
-    const base = rows[i % rows.length];
-    rows.push({
-      ...base,
-      id: `scan-${idx++}`,
-      ts: base.ts - (i + 1) * 3_600_000,
-      email: EMAILS[(idx + i) % EMAILS.length],
-      score: Math.max(10, Math.min(95, base.score + (Math.random() * 20 - 10))),
-    });
-  }
-  return rows.sort((a, b) => b.ts - a.ts);
+interface UserProfile {
+  clerk_user_id: string;
+  display_name: string | null;
+  email: string | null;
+  plan: string;
+  status: string;
+  role: string;
+  scan_count?: number;
+  created_at: string;
 }
 
-type TokenRow = {
-  code: string;
-  plan: "Pro" | "Business";
-  used: boolean;
+interface TokenRecord {
+  id: string;
+  token: string;
+  plan: string;
+  mode: string | null;
   email: string | null;
-  when: string;
-};
+  note: string | null;
+  used: boolean;
+  expires_at: string | null;
+  created_at: string;
+  computed_status: "used" | "unused" | "expired";
+}
 
-// ---------- Main component — auth gated by server ----------
+interface StatsData {
+  total_users: number;
+  total_scans: number;
+  scans_today: number;
+  active_paid_users: number;
+  scan_volume_7days: { date: string; count: number }[];
+}
+
+interface ApiService {
+  name: string;
+  status: "ok" | "degraded" | "down";
+  response_time_ms: number | null;
+  http_status: number | null;
+  error?: string;
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  target: string;
+  type: string;
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+}
+
+interface UserDetail {
+  profile: UserProfile;
+  recent_scans: {
+    id: string;
+    wallet_address: string;
+    chain: string;
+    risk_score: number;
+    risk_label: string;
+    created_at: string;
+  }[];
+  clerk_metadata: {
+    email: string;
+    banned: boolean;
+    created_at: number;
+    last_sign_in_at: number | null;
+  } | null;
+}
+
+// ─── Auth guard ───────────────────────────────────────────────────────────────
+
 export default function Admin() {
-  const [checking, setChecking] = useState(true);
-  const [authed, setAuthed] = useState(false);
-  const [, navigate] = useLocation();
-  const { isLoaded, getToken } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
 
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    getToken()
-      .then(async (token) => {
-        const r = await fetch("/api/admin/users", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (r.ok) {
-          setAuthed(true);
-        } else {
-          navigate("/");
-        }
-      })
-      .catch(() => navigate("/"))
-      .finally(() => setChecking(false));
-  }, [isLoaded, getToken, navigate]);
-
-  if (checking || !isLoaded) {
+  if (!isLoaded) {
     return (
-      <div className="container" style={{ paddingTop: 96 }}>
-        <div className="flex items-center justify-center gap-3 text-[color:var(--fg-tertiary)]">
-          <Shield className="w-5 h-5 animate-pulse" />
-          <span className="text-[13px]">Verifying access…</span>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Shield className="w-5 h-5 animate-pulse" style={{ color: "var(--accent)" }} />
       </div>
     );
   }
 
-  if (!authed) return null;
+  if (!isSignedIn) return <Redirect to="/sign-in" />;
+
+  const role = user?.publicMetadata?.role as string | undefined;
+  if (role !== "admin") return <Redirect to="/" />;
+
   return <AdminDashboard />;
 }
 
-type Tab = "ops" | "stats" | "monitor" | "announcements";
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 
-// ---------- Dashboard ----------
 function AdminDashboard() {
-  const { user } = useUser();
   const { getToken } = useAuth();
-  const [scans] = useState<ScanRow[]>(() => seedScans());
-  const [tokens, setTokens] = useState<TokenRow[]>([]);
-  const [genLoading, setGenLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("ops");
+  const { user } = useUser();
+  const [activeTab, setActiveTab] = useState<Tab>("users");
 
-  // Scan table state
-  const [query, setQuery] = useState("");
-  const [sortKey, setSortKey] = useState<keyof ScanRow | "score">("ts");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-
-  // Token filter
-  const [tokenFilter, setTokenFilter] = useState<"all" | "used" | "unused">("all");
-  const [showGen, setShowGen] = useState(false);
-
-  // Load real tokens from API on mount
-  useEffect(() => {
-    getToken().then(async (token) => {
-      const r = await fetch("/api/admin/tokens", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!r.ok) return;
-      const data = await r.json();
-      if (data.success && Array.isArray(data.tokens)) {
-        setTokens(
-          data.tokens.map(
-            (t: {
-              token: string;
-              plan: string;
-              used: boolean;
-              used_by?: string | null;
-              used_at?: string | null;
-            }) => ({
-              code: t.token,
-              plan: (t.plan === "business" ? "Business" : "Pro") as "Pro" | "Business",
-              used: t.used,
-              email: t.used_by ?? null,
-              when: t.used_at
-                ? new Date(t.used_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })
-                : "—",
-            })
-          )
-        );
-      }
-    });
-  }, [getToken]);
-
-  // Derived stats
-  const todayCount = useMemo(() => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    return scans.filter((s) => s.ts >= start.getTime()).length;
-  }, [scans]);
-
-  const uniqueUsers = useMemo(
-    () => new Set(scans.map((s) => s.email)).size,
-    [scans]
-  );
-
-  const chainBreakdown = useMemo(() => {
-    const map: Record<string, number> = {};
-    scans.forEach((s) => {
-      map[s.chain] = (map[s.chain] || 0) + 1;
-    });
-    const max = Math.max(...Object.values(map), 1);
-    return CHAINS.map((c) => ({
-      ...c,
-      count: map[c.code] || 0,
-      pct: Math.round(((map[c.code] || 0) / max) * 100),
-    })).sort((a, b) => b.count - a.count);
-  }, [scans]);
-
-  // Filter + sort scans
-  const filteredScans = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const list = q
-      ? scans.filter(
-          (s) =>
-            s.addr.toLowerCase().includes(q) ||
-            s.email.toLowerCase().includes(q) ||
-            s.chain.toLowerCase().includes(q)
-        )
-      : scans;
-    const sorted = [...list].sort((a, b) => {
-      const av = a[sortKey as keyof ScanRow];
-      const bv = b[sortKey as keyof ScanRow];
-      if (typeof av === "number" && typeof bv === "number") {
-        return sortDir === "asc" ? av - bv : bv - av;
-      }
-      return sortDir === "asc"
-        ? String(av).localeCompare(String(bv))
-        : String(bv).localeCompare(String(av));
-    });
-    return sorted;
-  }, [scans, query, sortKey, sortDir]);
-
-  const toggleSort = (k: keyof ScanRow | "score") => {
-    if (sortKey === k) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(k);
-      setSortDir("desc");
-    }
-  };
-
-  const filteredTokens = tokens.filter((r) =>
-    tokenFilter === "all" ? true : tokenFilter === "used" ? r.used : !r.used
-  );
-
-  const generateToken = async (plan: "Pro" | "Business") => {
-    setGenLoading(true);
-    try {
-      const authToken = await getToken();
-      const r = await fetch("/api/admin/generate-token", {
-        method: "POST",
+  const apiFetch = useCallback(
+    async (path: string, opts?: RequestInit) => {
+      const token = await getToken();
+      return fetch(path, {
+        ...opts,
         headers: {
           "Content-Type": "application/json",
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...opts?.headers,
         },
-        body: JSON.stringify({ plan: plan.toLowerCase(), quantity: 1 }),
       });
-      const data = await r.json();
-      if (data.success && Array.isArray(data.tokens)) {
-        const newRows: TokenRow[] = data.tokens.map((code: string) => ({
-          code,
-          plan,
-          used: false,
-          email: null,
-          when: "—",
-        }));
-        setTokens((prev) => [...newRows, ...prev]);
-      }
-    } finally {
-      setGenLoading(false);
-      setShowGen(false);
-    }
-  };
+    },
+    [getToken]
+  );
 
-  const adminEmail = user?.primaryEmailAddress?.emailAddress ?? "admin";
+  const adminEmail = user?.primaryEmailAddress?.emailAddress ?? "";
+  const initials = adminEmail.slice(0, 2).toUpperCase() || "AD";
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: "ops", label: "Operations" },
-    { id: "stats", label: "Usage Stats" },
-    { id: "monitor", label: "API Monitor" },
+    { id: "users", label: "User Management" },
+    { id: "generator", label: "Token Generator" },
+    { id: "history", label: "Token History" },
+    { id: "usage", label: "Usage Stats" },
+    { id: "api", label: "API Monitor" },
     { id: "announcements", label: "Announcements" },
   ];
 
   return (
-    <div className="container aw-admin" style={{ paddingTop: 56, paddingBottom: 120 }}>
+    <div style={{ maxWidth: 1180, margin: "0 auto", padding: "36px 28px 80px" }}>
       <Reveal>
-        <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
-          <div>
-            <Eyebrow>Admin · Internal</Eyebrow>
-            <h1 className="text-white text-[28px] md:text-[34px] font-bold tracking-tight mt-2">
-              Operations dashboard
-            </h1>
-            <div className="text-[12px] text-[color:var(--fg-tertiary)] mt-2">
-              Logged in as <span className="mono text-white">{adminEmail}</span>
-            </div>
-          </div>
-          <Button
-            variant="primary"
-            size="md"
-            icon={Plus}
-            onClick={() => setShowGen(true)}
+        {/* Header */}
+        <div style={{ marginBottom: 4 }}>
+          <Eyebrow>AltWallet · Internal</Eyebrow>
+          <h1
+            style={{
+              fontSize: 30,
+              fontWeight: 800,
+              letterSpacing: "-0.025em",
+              margin: "8px 0 0",
+              color: "var(--fg)",
+            }}
           >
-            Generate manual token
-          </Button>
+            Admin Panel
+          </h1>
+          <p style={{ color: "var(--fg-tertiary)", fontSize: 14, margin: "6px 0 0" }}>
+            Manage users, issue access tokens, and monitor platform health.
+          </p>
         </div>
 
         {/* Tab bar */}
-        <div className="flex gap-1 mb-8 border-b" style={{ borderColor: "#1a1a1a" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 2,
+            margin: "26px 0 28px",
+            borderBottom: "1px solid #1e1e1e",
+            overflowX: "auto",
+          }}
+        >
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className="px-4 py-2.5 text-[13px] font-medium transition-colors"
               style={{
-                color: activeTab === t.id ? "var(--accent)" : "var(--fg-tertiary)",
-                borderBottom: activeTab === t.id ? "2px solid var(--accent)" : "2px solid transparent",
+                position: "relative",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "12px 14px",
                 marginBottom: -1,
+                color: activeTab === t.id ? "var(--fg)" : "#888",
+                fontSize: 13.5,
+                fontWeight: 500,
+                borderBottom:
+                  activeTab === t.id ? "2px solid var(--accent)" : "2px solid transparent",
+                whiteSpace: "nowrap",
+                transition: "color 150ms",
               }}
             >
               {t.label}
@@ -356,433 +201,708 @@ function AdminDashboard() {
         </div>
       </Reveal>
 
-      {/* ========== Operations tab ========== */}
-      {activeTab === "ops" && (
-        <>
-          <Reveal>
-            <div className="aw-admin-stats mb-8">
-              <Stat label="Total scans" value={scans.length * 632 + 1241} />
-              <Stat label="Scans today" value={todayCount * 47 + 12} />
-              <Stat label="Active users" value={uniqueUsers * 214} />
-              <Stat label="Paid conversions" value={218} suffix=" / mo" />
-            </div>
-          </Reveal>
-
-          <Reveal>
-            <Card hover>
-              <div className="aw-card-head">
-                <Eyebrow>Top chains · last 30 days</Eyebrow>
-                <span className="aw-meta">{CHAINS.length} tracked</span>
-              </div>
-              <div className="flex flex-col gap-3">
-                {chainBreakdown.map((c) => (
-                  <div key={c.code} className="aw-chain-row">
-                    <div className="aw-chain-row-l">
-                      <ChainLogo code={c.code} size={16} />
-                      <span className="text-white text-[13px] font-medium">
-                        {c.name}
-                      </span>
-                      {c.beta && <Chip tone="beta">Beta</Chip>}
-                    </div>
-                    <div
-                      className="flex-1 h-2 rounded-full overflow-hidden"
-                      style={{ background: "#151515" }}
-                    >
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${c.pct}%`,
-                          background: c.color,
-                          transition: "width 900ms cubic-bezier(0.16, 1, 0.3, 1)",
-                        }}
-                      />
-                    </div>
-                    <div className="mono text-[12px] text-[color:var(--fg-tertiary)] w-20 text-right">
-                      {c.count.toLocaleString()} scans
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </Reveal>
-
-          <Reveal>
-            <Card className="aw-table-card mt-6">
-              <div className="aw-card-head flex-wrap gap-3">
-                <Eyebrow>All scans · {filteredScans.length}</Eyebrow>
-                <div className="aw-input aw-input-sm" style={{ maxWidth: 280 }}>
-                  <Search className="aw-input-icon" />
-                  <input
-                    placeholder="Search address, user or chain…"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                  {query && (
-                    <button
-                      className="aw-input-clear"
-                      onClick={() => setQuery("")}
-                      aria-label="Clear"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="aw-tbl">
-                <div
-                  className="aw-tbl-head"
-                  style={{ gridTemplateColumns: "1.6fr 0.7fr 0.7fr 1.2fr 0.9fr" }}
-                >
-                  <SortHeader label="Wallet" active={sortKey === "addr"} dir={sortDir} onClick={() => toggleSort("addr")} />
-                  <SortHeader label="Chain" active={sortKey === "chain"} dir={sortDir} onClick={() => toggleSort("chain")} />
-                  <SortHeader label="Score" active={sortKey === "score"} dir={sortDir} onClick={() => toggleSort("score")} />
-                  <SortHeader
-                    label="User"
-                    active={sortKey === "email"}
-                    dir={sortDir}
-                    onClick={() => toggleSort("email")}
-                    className="aw-tbl-hide-sm"
-                  />
-                  <SortHeader
-                    label="Time"
-                    active={sortKey === "ts"}
-                    dir={sortDir}
-                    onClick={() => toggleSort("ts")}
-                    align="right"
-                  />
-                </div>
-
-                {filteredScans.slice(0, 25).map((row) => {
-                  const risk = riskFromScore(row.score);
-                  return (
-                    <div
-                      key={row.id}
-                      className="aw-tbl-row"
-                      style={{ gridTemplateColumns: "1.6fr 0.7fr 0.7fr 1.2fr 0.9fr" }}
-                    >
-                      <div className="mono aw-addr truncate">
-                        {row.addr.slice(0, 10)}…{row.addr.slice(-6)}
-                      </div>
-                      <div>
-                        <ChainBadge chain={row.chain} />
-                      </div>
-                      <div>
-                        <Chip tone={risk.tone} dot>
-                          {Math.round(row.score)}
-                        </Chip>
-                      </div>
-                      <div className="aw-tbl-hide-sm text-[color:var(--fg-secondary)] truncate">
-                        {row.email}
-                      </div>
-                      <div className="aw-tbl-time" style={{ textAlign: "right" }}>
-                        {relTime(row.ts)}
-                      </div>
-                    </div>
-                  );
-                })}
-                {filteredScans.length === 0 && (
-                  <div className="py-10 text-center text-[13px] text-[color:var(--fg-tertiary)]">
-                    No scans match "{query}".
-                  </div>
-                )}
-              </div>
-            </Card>
-          </Reveal>
-
-          <Reveal>
-            <Card className="mt-6">
-              <div className="aw-card-head flex-wrap gap-3">
-                <Eyebrow>License tokens · {filteredTokens.length}</Eyebrow>
-                <div className="flex items-center gap-1 flex-wrap">
-                  {(["all", "unused", "used"] as const).map((f) => (
-                    <button
-                      key={f}
-                      onClick={() => setTokenFilter(f)}
-                      className={`aw-tok-pill ${tokenFilter === f ? "active" : ""}`}
-                    >
-                      {f}
-                    </button>
-                  ))}
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={Plus}
-                    onClick={() => setShowGen(true)}
-                  >
-                    New
-                  </Button>
-                </div>
-              </div>
-
-              <div className="aw-tok-list">
-                {filteredTokens.map((row) => (
-                  <div key={row.code} className="aw-tok-row">
-                    <span className="mono text-[13px] text-white aw-tok-code">
-                      {row.code}
-                    </span>
-                    <Chip tone={row.plan === "Business" ? "info" : "safe"}>
-                      {row.plan}
-                    </Chip>
-                    <Chip tone={row.used ? "neutral" : ("solid" as any)}>
-                      {row.used ? "Used" : "Unused"}
-                    </Chip>
-                    <span className="text-[12px] text-[color:var(--fg-secondary)] truncate aw-tok-email">
-                      {row.email || "—"}
-                    </span>
-                    <span className="text-[12px] mono text-[color:var(--fg-tertiary)] aw-tok-when">
-                      {row.when}
-                    </span>
-                    <div className="flex items-center justify-end gap-1">
-                      <IconBtn
-                        icon={Copy}
-                        aria-label="Copy"
-                        onClick={() => navigator.clipboard.writeText(row.code)}
-                      />
-                      <IconBtn icon={Mail} aria-label="Re-send email" />
-                    </div>
-                  </div>
-                ))}
-                {filteredTokens.length === 0 && (
-                  <div className="py-10 text-center text-[13px] text-[color:var(--fg-tertiary)]">
-                    No tokens.
-                  </div>
-                )}
-              </div>
-            </Card>
-          </Reveal>
-        </>
-      )}
-
-      {/* ========== Usage Stats tab ========== */}
-      {activeTab === "stats" && <UsageStatsTab getToken={getToken} />}
-
-      {/* ========== API Monitor tab ========== */}
-      {activeTab === "monitor" && <ApiMonitorTab getToken={getToken} />}
-
-      {/* ========== Announcements tab ========== */}
-      {activeTab === "announcements" && <AnnouncementsTab getToken={getToken} />}
-
-      {/* ---------- Generate token modal ---------- */}
-      {showGen && (
-        <div
-          className="aw-modal-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowGen(false);
-          }}
-        >
-          <div className="aw-modal">
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <Eyebrow>Manual token</Eyebrow>
-                <h3 className="text-white text-[20px] font-bold mt-2">
-                  Generate license key
-                </h3>
-                <p className="text-[12px] text-[color:var(--fg-tertiary)] mt-2 max-w-xs">
-                  Use this for support cases or enterprise onboarding. The token
-                  is single-use and bound to the first account that redeems it.
-                </p>
-              </div>
-              <IconBtn icon={X} aria-label="Close" onClick={() => setShowGen(false)} />
-            </div>
-            <div className="flex flex-col gap-3">
-              <button
-                className="aw-plan-pick"
-                disabled={genLoading}
-                onClick={() => generateToken("Pro")}
-              >
-                <div>
-                  <div className="text-white text-[14px] font-semibold">Pro</div>
-                  <div className="text-[12px] text-[color:var(--fg-tertiary)]">
-                    Unlimited scans · 12-month history · AI summaries
-                  </div>
-                </div>
-                <Check className="w-4 h-4 text-[color:var(--accent)]" />
-              </button>
-              <button
-                className="aw-plan-pick"
-                disabled={genLoading}
-                onClick={() => generateToken("Business")}
-              >
-                <div>
-                  <div className="text-white text-[14px] font-semibold">
-                    Business
-                  </div>
-                  <div className="text-[12px] text-[color:var(--fg-tertiary)]">
-                    3 seats · 24-month history · CSV export · API
-                  </div>
-                </div>
-                <Check className="w-4 h-4 text-[color:var(--accent)]" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTab === "users" && <UsersTab apiFetch={apiFetch} />}
+      {activeTab === "generator" && <TokenGeneratorTab apiFetch={apiFetch} />}
+      {activeTab === "history" && <TokenHistoryTab apiFetch={apiFetch} />}
+      {activeTab === "usage" && <UsageStatsTab apiFetch={apiFetch} />}
+      {activeTab === "api" && <ApiMonitorTab apiFetch={apiFetch} />}
+      {activeTab === "announcements" && <AnnouncementsTab apiFetch={apiFetch} />}
     </div>
   );
 }
 
-// ---------- Usage Stats Tab ----------
-interface StatsData {
-  today: number;
-  week: number;
-  month: number;
-  chains: Record<string, number>;
-  active_users: number;
+// ─── Tab 1: User Management ────────────────────────────────────────────────────
+
+function UsersTab({ apiFetch }: { apiFetch: ApiFetch }) {
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [planFilter, setPlanFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: "20" });
+      if (search) params.set("search", search);
+      if (planFilter) params.set("plan", planFilter);
+      if (statusFilter) params.set("status", statusFilter);
+
+      const r = await apiFetch(`/api/admin/users?${params}`);
+      const d = await r.json();
+      if (d.data) {
+        setUsers(d.data);
+        setTotal(d.pagination?.total ?? 0);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [apiFetch, page, search, planFilter, statusFilter]);
+
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  const openUser = async (userId: string) => {
+    setModalLoading(true);
+    setSelectedUser(null);
+    try {
+      const r = await apiFetch(`/api/admin/users/${userId}`);
+      const d = await r.json();
+      setSelectedUser(d);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const closeModal = () => setSelectedUser(null);
+
+  return (
+    <Reveal>
+      {/* Toolbar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 9,
+            background: "#0B0B0B",
+            border: "1px solid #1e1e1e",
+            borderRadius: 8,
+            height: 38,
+            padding: "0 12px",
+            width: 280,
+          }}
+        >
+          <Search style={{ width: 15, height: 15, color: "#5a5a5a", flexShrink: 0 }} />
+          <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Search name, email, or address"
+            style={{
+              flex: 1,
+              background: "none",
+              border: "none",
+              outline: "none",
+              color: "var(--fg)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 13,
+            }}
+          />
+        </div>
+        <AdminSelect
+          value={planFilter}
+          onChange={(v) => { setPlanFilter(v); setPage(1); }}
+          options={[
+            { value: "", label: "All plans" },
+            { value: "free", label: "Free" },
+            { value: "pro", label: "Pro" },
+            { value: "business", label: "Business" },
+          ]}
+        />
+        <AdminSelect
+          value={statusFilter}
+          onChange={(v) => { setStatusFilter(v); setPage(1); }}
+          options={[
+            { value: "", label: "All status" },
+            { value: "active", label: "Active" },
+            { value: "banned", label: "Banned" },
+          ]}
+        />
+        <div style={{ marginLeft: "auto", color: "#888", fontSize: 13 }}>
+          <b style={{ color: "var(--fg)" }}>{users.length}</b> of {total.toLocaleString()} users
+        </div>
+      </div>
+
+      {/* Table */}
+      <Card style={{ overflow: "hidden" }}>
+        <div style={{ width: "100%" }}>
+          <TblHead cols="2.1fr 0.7fr 0.7fr 0.9fr 0.9fr 0.7fr">
+            <div>User</div>
+            <div>Plan</div>
+            <div style={{ textAlign: "right" }}>Scans</div>
+            <div>Joined</div>
+            <div>Status</div>
+            <div style={{ textAlign: "right" }}>Action</div>
+          </TblHead>
+          {loading ? (
+            <div style={{ padding: "40px 22px", textAlign: "center", color: "#888", fontSize: 13 }}>Loading…</div>
+          ) : users.length === 0 ? (
+            <div style={{ padding: "40px 22px", textAlign: "center", color: "#888", fontSize: 13 }}>No users found.</div>
+          ) : (
+            users.map((u) => (
+              <TblRow key={u.clerk_user_id} cols="2.1fr 0.7fr 0.7fr 0.9fr 0.9fr 0.7fr">
+                <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
+                  <UserAvatar name={u.display_name || u.email || "?"} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 500, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {u.display_name || "—"}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#888", fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {u.email || "—"}
+                    </div>
+                  </div>
+                </div>
+                <div><PlanChip plan={u.plan} /></div>
+                <div style={{ textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--fg)" }}>
+                  {u.scan_count ?? "—"}
+                </div>
+                <div style={{ color: "#888", fontSize: 12.5 }}>
+                  {formatDate(u.created_at)}
+                </div>
+                <div>
+                  <StatusDot active={u.status !== "banned"} />
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <button
+                    onClick={() => openUser(u.clerk_user_id)}
+                    style={{
+                      height: 30,
+                      padding: "0 13px",
+                      borderRadius: 999,
+                      fontSize: 12.5,
+                      fontWeight: 500,
+                      background: "#161616",
+                      color: "var(--fg)",
+                      border: "1px solid #1e1e1e",
+                      cursor: "pointer",
+                    }}
+                  >
+                    View
+                  </button>
+                </div>
+              </TblRow>
+            ))
+          )}
+        </div>
+      </Card>
+
+      {/* User Detail Modal */}
+      {(selectedUser || modalLoading) && (
+        <UserDetailModal
+          detail={selectedUser}
+          loading={modalLoading}
+          onClose={closeModal}
+          apiFetch={apiFetch}
+          onUpdate={fetchUsers}
+        />
+      )}
+    </Reveal>
+  );
 }
 
-function UsageStatsTab({ getToken }: { getToken: () => Promise<string | null> }) {
+// ─── Tab 2: Token Generator ────────────────────────────────────────────────────
+
+function TokenGeneratorTab({ apiFetch }: { apiFetch: ApiFetch }) {
+  const [mode, setMode] = useState<"beta_tester" | "special_package">("beta_tester");
+  const [plan, setPlan] = useState("pro");
+  const [email, setEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [expiresDays, setExpiresDays] = useState(365);
+  const [generating, setGenerating] = useState(false);
+  const [lastToken, setLastToken] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState("");
+
+  const generate = async () => {
+    setError("");
+    setGenerating(true);
+    try {
+      const r = await apiFetch("/api/admin/tokens/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          mode,
+          plan,
+          email: email.trim() || undefined,
+          note: note.trim() || undefined,
+          expires_days: expiresDays,
+        }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setLastToken(d.token.token);
+        setEmail("");
+        setNote("");
+      } else {
+        setError(d.error ?? "Failed to generate token");
+      }
+    } catch {
+      setError("Network error");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const copyToken = () => {
+    if (!lastToken) return;
+    navigator.clipboard?.writeText(lastToken);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  };
+
+  const EXPIRE_OPTIONS = [
+    { value: 30, label: "30 days" },
+    { value: 60, label: "60 days" },
+    { value: 90, label: "90 days" },
+    { value: 365, label: "1 year" },
+    { value: 36500, label: "Lifetime" },
+  ];
+
+  return (
+    <Reveal>
+      <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
+        {/* Generator form */}
+        <Card style={{ flex: 1, minWidth: 440, padding: 24 }}>
+          {/* Mode segmented control */}
+          <div
+            style={{
+              display: "inline-flex",
+              background: "#0B0B0B",
+              border: "1px solid #1e1e1e",
+              borderRadius: 9,
+              padding: 3,
+              gap: 3,
+              marginBottom: 24,
+            }}
+          >
+            {(["beta_tester", "special_package"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                style={{
+                  background: mode === m ? "#161616" : "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "7px 16px",
+                  borderRadius: 6,
+                  color: mode === m ? "var(--fg)" : "#888",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  transition: "background 150ms, color 150ms",
+                }}
+              >
+                {m === "beta_tester" ? "Beta Tester" : "Special Package"}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px 20px" }}>
+            <div>
+              <FormLabel>Recipient email</FormLabel>
+              <InputText
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="user@example.com"
+                mono
+              />
+            </div>
+            <div>
+              <FormLabel>Plan</FormLabel>
+              <AdminSelect
+                value={plan}
+                onChange={setPlan}
+                options={[
+                  { value: "pro", label: "Pro" },
+                  { value: "business", label: "Business" },
+                ]}
+                full
+              />
+            </div>
+            <div>
+              <FormLabel>Token duration</FormLabel>
+              <AdminSelect
+                value={String(expiresDays)}
+                onChange={(v) => setExpiresDays(Number(v))}
+                options={EXPIRE_OPTIONS.map((o) => ({ value: String(o.value), label: o.label }))}
+                full
+              />
+            </div>
+            <div>
+              <FormLabel>Notes (internal)</FormLabel>
+              <InputText
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="e.g. Q2 beta cohort"
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 24 }}>
+            <Button
+              variant="primary"
+              size="md"
+              icon={Plus}
+              onClick={generate}
+              disabled={generating}
+            >
+              {generating ? "Generating…" : "Generate token"}
+            </Button>
+            <span style={{ fontSize: 12.5, color: "#888" }}>
+              Token will be emailed via Resend automatically.
+            </span>
+          </div>
+
+          {error && (
+            <p style={{ fontSize: 12, color: "#E5484D", marginTop: 10 }}>{error}</p>
+          )}
+
+          {lastToken && (
+            <div
+              style={{
+                marginTop: 22,
+                background: "#0B0B0B",
+                border: "1px solid #1e1e1e",
+                borderRadius: 8,
+                padding: "16px 18px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#5a5a5a",
+                    marginBottom: 6,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Last generated
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 14,
+                    color: "var(--accent)",
+                    letterSpacing: "0.02em",
+                    wordBreak: "break-all",
+                  }}
+                >
+                  {lastToken}
+                </div>
+              </div>
+              <button
+                onClick={copyToken}
+                style={{
+                  height: 30,
+                  padding: "0 13px",
+                  borderRadius: 999,
+                  fontSize: 12.5,
+                  fontWeight: 500,
+                  background: "#161616",
+                  color: "var(--fg)",
+                  border: "1px solid #1e1e1e",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {copied ? <Check style={{ width: 13, height: 13 }} /> : <Copy style={{ width: 13, height: 13 }} />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+          )}
+        </Card>
+
+        {/* Info sidebar */}
+        <Card style={{ width: 280, padding: 24 }}>
+          <div style={{ marginBottom: 14 }}><Eyebrow>How it works</Eyebrow></div>
+          <p style={{ fontSize: 13, color: "#a1a1a1", lineHeight: 1.6, margin: "0 0 16px" }}>
+            Tokens grant a recipient elevated plan access without payment. Beta tester tokens
+            are time-boxed; special packages can be lifetime.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 13, color: "#888" }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Format</span>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--fg)", fontSize: 11 }}>
+                ALTW-XXXXXXXX-XXXX-XXXX
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Single-use</span>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--fg)" }}>Yes</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Email optional</span>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--fg)" }}>Yes</span>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </Reveal>
+  );
+}
+
+// ─── Tab 3: Token History ──────────────────────────────────────────────────────
+
+function TokenHistoryTab({ apiFetch }: { apiFetch: ApiFetch }) {
+  const [tokens, setTokens] = useState<TokenRecord[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [planFilter, setPlanFilter] = useState("");
+
+  const fetchTokens = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: "50" });
+      if (statusFilter) params.set("status", statusFilter);
+      if (planFilter) params.set("plan", planFilter);
+      const r = await apiFetch(`/api/admin/tokens?${params}`);
+      const d = await r.json();
+      if (d.data) {
+        setTokens(d.data);
+        setTotal(d.pagination?.total ?? 0);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [apiFetch, statusFilter, planFilter]);
+
+  useEffect(() => { fetchTokens(); }, [fetchTokens]);
+
+  return (
+    <Reveal>
+      <div style={{ display: "flex", gap: 12, marginBottom: 18, flexWrap: "wrap" }}>
+        <AdminSelect
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: "", label: "All status" },
+            { value: "used", label: "Used" },
+            { value: "unused", label: "Unused" },
+            { value: "expired", label: "Expired" },
+          ]}
+        />
+        <AdminSelect
+          value={planFilter}
+          onChange={setPlanFilter}
+          options={[
+            { value: "", label: "All plans" },
+            { value: "pro", label: "Pro" },
+            { value: "business", label: "Business" },
+          ]}
+        />
+        <div style={{ marginLeft: "auto", color: "#888", fontSize: 13 }}>
+          <b style={{ color: "var(--fg)" }}>{total.toLocaleString()}</b> tokens
+        </div>
+      </div>
+
+      <Card style={{ overflow: "hidden" }}>
+        <div>
+          <TblHead cols="1.6fr 1.5fr 0.7fr 0.9fr 0.9fr 0.8fr">
+            <div>Token</div>
+            <div>Recipient</div>
+            <div>Plan</div>
+            <div>Created</div>
+            <div>Expires</div>
+            <div>Status</div>
+          </TblHead>
+          {loading ? (
+            <div style={{ padding: "40px 22px", textAlign: "center", color: "#888", fontSize: 13 }}>Loading…</div>
+          ) : tokens.length === 0 ? (
+            <div style={{ padding: "40px 22px", textAlign: "center", color: "#888", fontSize: 13 }}>No tokens found.</div>
+          ) : (
+            tokens.map((t) => (
+              <TblRow key={t.id} cols="1.6fr 1.5fr 0.7fr 0.9fr 0.9fr 0.8fr">
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg)" }}>
+                  {t.token}
+                </div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, color: "#a1a1a1" }}>
+                  {t.email || "—"}
+                </div>
+                <div><PlanChip plan={t.plan} /></div>
+                <div style={{ color: "#888", fontSize: 12.5 }}>{formatDate(t.created_at)}</div>
+                <div style={{ color: "#888", fontSize: 12.5 }}>
+                  {t.expires_at ? formatDate(t.expires_at) : "Lifetime"}
+                </div>
+                <div><TokenStatusChip status={t.computed_status} /></div>
+              </TblRow>
+            ))
+          )}
+        </div>
+      </Card>
+    </Reveal>
+  );
+}
+
+// ─── Tab 4: Usage Stats ────────────────────────────────────────────────────────
+
+function UsageStatsTab({ apiFetch }: { apiFetch: ApiFetch }) {
   const [data, setData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     setLoading(true);
-    getToken()
-      .then(async (token) => {
-        const r = await fetch("/api/admin/stats", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        const d = await r.json();
-        if (d.success) setData(d);
-        else setError(d.error ?? "Failed to load stats.");
+    apiFetch("/api/admin/stats")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.error) setError(d.error);
+        else setData(d);
       })
-      .catch(() => setError("Network error."))
+      .catch(() => setError("Network error"))
       .finally(() => setLoading(false));
-  }, [getToken]);
+  }, [apiFetch]);
 
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} />;
+  if (loading) return <TabLoading />;
+  if (error) return <TabError message={error} />;
   if (!data) return null;
 
-  const chainEntries = Object.entries(data.chains).sort((a, b) => b[1] - a[1]);
-  const maxChain = Math.max(...chainEntries.map((e) => e[1]), 1);
-
-  return (
-    <div className="flex flex-col gap-6">
-      <Reveal>
-        <div className="grid sm:grid-cols-3 gap-4">
-          <StatCard label="Scans today" value={data.today} />
-          <StatCard label="Scans this week" value={data.week} />
-          <StatCard label="Scans this month" value={data.month} />
-        </div>
-      </Reveal>
-
-      <Reveal>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Card hover>
-            <Eyebrow>Active users · last 7 days</Eyebrow>
-            <div className="text-white font-bold mt-3 tracking-tight mono text-[40px]">
-              <CountUp to={data.active_users} />
-            </div>
-          </Card>
-
-          <Card hover>
-            <div className="aw-card-head mb-4">
-              <Eyebrow>Scans by chain</Eyebrow>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              {chainEntries.map(([chain, count]) => (
-                <div key={chain} className="flex items-center gap-3">
-                  <span className="mono text-[12px] text-white w-10 uppercase">{chain}</span>
-                  <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#151515" }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.round((count / maxChain) * 100)}%`,
-                        background: "var(--accent)",
-                        transition: "width 700ms cubic-bezier(0.16, 1, 0.3, 1)",
-                      }}
-                    />
-                  </div>
-                  <span className="mono text-[12px] text-[color:var(--fg-tertiary)] w-10 text-right">
-                    {count}
-                  </span>
-                </div>
-              ))}
-              {chainEntries.length === 0 && (
-                <p className="text-[13px] text-[color:var(--fg-tertiary)]">No scan data yet.</p>
-              )}
-            </div>
-          </Card>
-        </div>
-      </Reveal>
-    </div>
-  );
-}
-
-// ---------- API Monitor Tab ----------
-interface ServiceRow {
-  name: string;
-  calls_today: number;
-  limit: number | null;
-}
-
-function ApiMonitorTab({ getToken }: { getToken: () => Promise<string | null> }) {
-  const [services, setServices] = useState<ServiceRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    setLoading(true);
-    getToken()
-      .then(async (token) => {
-        const r = await fetch("/api/admin/api-monitor", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        const d = await r.json();
-        if (d.success) setServices(d.services);
-        else setError(d.error ?? "Failed to load monitor data.");
-      })
-      .catch(() => setError("Network error."))
-      .finally(() => setLoading(false));
-  }, [getToken]);
-
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} />;
+  const maxVol = Math.max(...data.scan_volume_7days.map((d) => d.count), 1);
 
   return (
     <Reveal>
-      <Card>
-        <div className="aw-card-head mb-4">
-          <Eyebrow>API usage · today</Eyebrow>
+      <div style={{ display: "grid", gridTemplateColumns: "0.9fr 1.1fr", gap: 20, alignItems: "start" }}>
+        {/* Stat cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+          <StatCard label="Total users" value={data.total_users} />
+          <StatCard label="Total scans" value={data.total_scans} />
+          <StatCard label="Scans today" value={data.scans_today} />
+          <StatCard label="Active Pro + Biz" value={data.active_paid_users} />
         </div>
-        <div className="aw-tbl">
-          <div
-            className="aw-tbl-head"
-            style={{ gridTemplateColumns: "1.5fr 1fr 1fr 80px" }}
-          >
-            <div>Service</div>
-            <div>Calls today</div>
-            <div>Daily limit</div>
-            <div style={{ textAlign: "right" }}>Status</div>
+
+        {/* 7-day chart */}
+        <Card style={{ padding: 24 }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 20 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>7-day scan volume</span>
+            <span style={{ color: "#888", fontSize: 12, fontFamily: "var(--font-mono)" }}>
+              {data.scan_volume_7days[0]?.date} – {data.scan_volume_7days[data.scan_volume_7days.length - 1]?.date}
+            </span>
           </div>
-          {services.map((svc) => {
-            const pct = svc.limit ? (svc.calls_today / svc.limit) * 100 : 0;
-            const status = svc.limit === null ? "ok" : pct >= 80 ? "warn" : "ok";
-            return (
-              <div
-                key={svc.name}
-                className="aw-tbl-row"
-                style={{ gridTemplateColumns: "1.5fr 1fr 1fr 80px" }}
-              >
-                <div className="text-white text-[13px] font-medium">{svc.name}</div>
-                <div className="mono text-[13px]">{svc.calls_today.toLocaleString()}</div>
-                <div className="mono text-[12px] text-[color:var(--fg-tertiary)]">
-                  {svc.limit ? svc.limit.toLocaleString() : "—"}
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <span
-                    className="inline-block w-2 h-2 rounded-full"
-                    style={{ background: status === "warn" ? "#F5A623" : "#1D9E75" }}
-                    title={status === "warn" ? `${Math.round(pct)}% of limit used` : "OK"}
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 14, height: 200, paddingTop: 8 }}>
+            {data.scan_volume_7days.map((d) => {
+              const pct = Math.round((d.count / maxVol) * 100);
+              const dayLabel = new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" });
+              return (
+                <div
+                  key={d.date}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 10,
+                    height: "100%",
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#a1a1a1" }}>
+                    {d.count}
+                  </div>
+                  <div
+                    style={{
+                      width: "100%",
+                      maxWidth: 44,
+                      height: `${pct}%`,
+                      minHeight: 4,
+                      borderRadius: "6px 6px 2px 2px",
+                      background: "rgba(29,158,117,0.16)",
+                      borderTop: "2px solid var(--accent)",
+                      transition: "height 500ms cubic-bezier(0.16, 1, 0.3, 1)",
+                    }}
                   />
+                  <div style={{ fontSize: 11, color: "#888" }}>{dayLabel}</div>
                 </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+    </Reveal>
+  );
+}
+
+// ─── Tab 5: API Monitor ────────────────────────────────────────────────────────
+
+function ApiMonitorTab({ apiFetch }: { apiFetch: ApiFetch }) {
+  const [services, setServices] = useState<ApiService[]>([]);
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const refresh = useCallback(() => {
+    setLoading(true);
+    apiFetch("/api/admin/api-health")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.services) {
+          setServices(d.services);
+          setCheckedAt(d.checked_at);
+        } else {
+          setError(d.error ?? "Failed to load monitor data");
+        }
+      })
+      .catch(() => setError("Network error"))
+      .finally(() => setLoading(false));
+  }, [apiFetch]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  if (loading) return <TabLoading />;
+  if (error) return <TabError message={error} />;
+
+  return (
+    <Reveal>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        {checkedAt && (
+          <span style={{ fontSize: 12, color: "#888", fontFamily: "var(--font-mono)" }}>
+            Checked {new Date(checkedAt).toLocaleTimeString()}
+          </span>
+        )}
+        <Button variant="secondary" size="sm" onClick={refresh} style={{ marginLeft: "auto" }}>
+          Refresh
+        </Button>
+      </div>
+
+      <Card style={{ overflow: "hidden" }}>
+        <div>
+          <TblHead cols="1.4fr 1fr 1fr 1.2fr 0.7fr">
+            <div>API name</div>
+            <div>Status</div>
+            <div>Response time</div>
+            <div>HTTP</div>
+            <div style={{ textAlign: "right" }}>Health</div>
+          </TblHead>
+          {services.map((svc) => (
+            <TblRow key={svc.name} cols="1.4fr 1fr 1fr 1.2fr 0.7fr">
+              <div style={{ fontWeight: 500, color: "var(--fg)", fontSize: 13 }}>{svc.name}</div>
+              <div>
+                <ApiStatusChip status={svc.status} />
               </div>
-            );
-          })}
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, color: "#a1a1a1" }}>
+                {svc.response_time_ms !== null ? `${svc.response_time_ms} ms` : "—"}
+              </div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, color: "#888" }}>
+                {svc.http_status ?? (svc.error || "—")}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background:
+                      svc.status === "ok"
+                        ? "var(--accent)"
+                        : svc.status === "degraded"
+                        ? "#F5A623"
+                        : "#E5484D",
+                  }}
+                />
+              </div>
+            </TblRow>
+          ))}
           {services.length === 0 && (
-            <div className="py-10 text-center text-[13px] text-[color:var(--fg-tertiary)]">
+            <div style={{ padding: "40px 22px", textAlign: "center", color: "#888", fontSize: 13 }}>
               No data available.
             </div>
           )}
@@ -792,64 +912,59 @@ function ApiMonitorTab({ getToken }: { getToken: () => Promise<string | null> })
   );
 }
 
-// ---------- Announcements Tab ----------
-interface AnnouncementRow {
-  id: string;
-  message: string;
-  active: boolean;
-  created_at: string;
-  expires_at: string | null;
-}
+// ─── Tab 6: Announcements ─────────────────────────────────────────────────────
 
-function AnnouncementsTab({ getToken }: { getToken: () => Promise<string | null> }) {
-  const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
+function AnnouncementsTab({ apiFetch }: { apiFetch: ApiFetch }) {
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
+  const [target, setTarget] = useState("all");
+  const [annType, setAnnType] = useState("info");
   const [expiresAt, setExpiresAt] = useState("");
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState("");
 
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
     setLoading(true);
     try {
-      const token = await getToken();
-      const r = await fetch("/api/admin/announcements", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const r = await apiFetch("/api/admin/announcements?limit=50");
       const d = await r.json();
-      if (d.success) setAnnouncements(d.announcements ?? []);
-      else setError(d.error ?? "Failed to load announcements.");
+      if (d.data) setAnnouncements(d.data);
+      else setError(d.error ?? "Failed to load");
     } catch {
-      setError("Network error.");
+      setError("Network error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiFetch]);
 
-  useEffect(() => { fetchAnnouncements(); }, []);
+  useEffect(() => { fetchAnnouncements(); }, [fetchAnnouncements]);
 
   const handlePost = async () => {
     setPostError("");
-    if (!message.trim()) return;
+    if (!title.trim() || !message.trim()) return;
     setPosting(true);
     try {
-      const token = await getToken();
-      const r = await fetch("/api/admin/announcements", {
+      const r = await apiFetch("/api/admin/announcements", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ message: message.trim(), expires_at: expiresAt || undefined }),
+        body: JSON.stringify({
+          title: title.trim(),
+          message: message.trim(),
+          target,
+          type: annType,
+          expires_at: expiresAt || undefined,
+        }),
       });
       const d = await r.json();
       if (d.success) {
+        setTitle("");
         setMessage("");
         setExpiresAt("");
         fetchAnnouncements();
       } else {
-        setPostError(d.error ?? "Failed to post.");
+        setPostError(d.error ?? "Failed to post");
       }
     } finally {
       setPosting(false);
@@ -857,213 +972,803 @@ function AnnouncementsTab({ getToken }: { getToken: () => Promise<string | null>
   };
 
   const handleDeactivate = async (id: string) => {
-    const token = await getToken();
-    await fetch(`/api/admin/announcements/${id}`, {
-      method: "PATCH",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    await apiFetch(`/api/admin/announcements/${id}/deactivate`, { method: "PATCH" });
     fetchAnnouncements();
   };
 
-  const getStatus = (a: AnnouncementRow): { label: string; tone: "safe" | "neutral" | "medium" } => {
-    if (!a.active) return { label: "Deactivated", tone: "neutral" };
-    if (a.expires_at && new Date(a.expires_at) < new Date()) return { label: "Expired", tone: "medium" };
-    return { label: "Active", tone: "safe" };
-  };
-
   return (
-    <div className="flex flex-col gap-6">
-      <Reveal>
-        <Card hover>
-          <div className="aw-card-head mb-4">
-            <Eyebrow>Post announcement</Eyebrow>
-            <Megaphone className="w-4 h-4 text-[color:var(--fg-tertiary)]" />
+    <Reveal>
+      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 20, alignItems: "start" }}>
+        {/* Compose */}
+        <Card style={{ padding: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)", marginBottom: 4 }}>
+            Compose announcement
           </div>
-          <div className="flex flex-col gap-3">
+          <p style={{ fontSize: 12.5, color: "#888", margin: "0 0 18px" }}>
+            Published messages appear in the recipient's in-app inbox.
+          </p>
+
+          <div style={{ marginBottom: 14 }}>
+            <FormLabel>Title</FormLabel>
+            <InputText
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Short, clear headline"
+            />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <FormLabel>Message</FormLabel>
             <textarea
-              className="aw-input"
-              style={{ minHeight: 80, resize: "vertical", padding: "10px 12px" }}
-              placeholder="Announcement message…"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              placeholder="Write the announcement body"
+              rows={4}
+              style={{
+                width: "100%",
+                padding: "11px 12px",
+                background: "#0B0B0B",
+                border: "1px solid #1e1e1e",
+                borderRadius: 8,
+                color: "var(--fg)",
+                fontFamily: "inherit",
+                fontSize: 13,
+                outline: "none",
+                resize: "vertical",
+                lineHeight: 1.5,
+              }}
             />
-            <div className="flex gap-3 items-center flex-wrap">
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] text-[color:var(--fg-tertiary)]">
-                  Expires at (optional)
-                </label>
-                <input
-                  type="datetime-local"
-                  className="aw-input"
-                  style={{ padding: "6px 10px", fontSize: 12 }}
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                />
-              </div>
-              <Button
-                variant="primary"
-                size="md"
-                onClick={handlePost}
-                disabled={posting || !message.trim()}
-                style={{ alignSelf: "flex-end" }}
-              >
-                {posting ? "Posting…" : "Post Announcement"}
-              </Button>
-            </div>
-            {postError && (
-              <p className="text-[12px]" style={{ color: "#E53E3E" }}>{postError}</p>
-            )}
           </div>
-        </Card>
-      </Reveal>
 
-      <Reveal>
-        <Card>
-          <div className="aw-card-head mb-4">
-            <Eyebrow>Past announcements</Eyebrow>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 14, flexWrap: "wrap" }}>
+            <div style={{ width: 160 }}>
+              <FormLabel>Target</FormLabel>
+              <AdminSelect
+                value={target}
+                onChange={setTarget}
+                options={[
+                  { value: "all", label: "All users" },
+                  { value: "free", label: "Free" },
+                  { value: "pro", label: "Pro" },
+                  { value: "business", label: "Business" },
+                ]}
+                full
+              />
+            </div>
+            <div style={{ width: 140 }}>
+              <FormLabel>Type</FormLabel>
+              <AdminSelect
+                value={annType}
+                onChange={setAnnType}
+                options={[
+                  { value: "info", label: "Info" },
+                  { value: "success", label: "Success" },
+                  { value: "warning", label: "Warning" },
+                ]}
+                full
+              />
+            </div>
+            <Button
+              variant="primary"
+              size="md"
+              icon={Send}
+              onClick={handlePost}
+              disabled={posting || !title.trim() || !message.trim()}
+              style={{ marginLeft: "auto" }}
+            >
+              {posting ? "Posting…" : "Publish"}
+            </Button>
+          </div>
+
+          {postError && (
+            <p style={{ fontSize: 12, color: "#E5484D", marginTop: 10 }}>{postError}</p>
+          )}
+        </Card>
+
+        {/* Recent announcements */}
+        <Card style={{ padding: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)", marginBottom: 8 }}>
+            Recent announcements
           </div>
           {loading ? (
-            <LoadingState />
+            <TabLoading />
           ) : error ? (
-            <ErrorState message={error} />
+            <TabError message={error} />
           ) : announcements.length === 0 ? (
-            <p className="text-[13px] text-[color:var(--fg-tertiary)] py-4">
-              No announcements yet.
-            </p>
+            <p style={{ fontSize: 13, color: "#888", paddingTop: 8 }}>No announcements yet.</p>
           ) : (
-            <div className="flex flex-col gap-3">
-              {announcements.map((a) => {
-                const { label, tone } = getStatus(a);
-                return (
-                  <div
-                    key={a.id}
-                    className="flex items-start justify-between gap-4 py-3 border-t"
-                    style={{ borderColor: "#1a1a1a" }}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] text-white mb-1">{a.message}</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Chip tone={tone}>{label}</Chip>
-                        <span className="text-[11px] text-[color:var(--fg-tertiary)] mono">
-                          {new Date(a.created_at).toLocaleString("en-US", {
-                            month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-                          })}
-                        </span>
-                        {a.expires_at && (
-                          <span className="text-[11px] text-[color:var(--fg-tertiary)]">
-                            Expires {new Date(a.expires_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {a.active && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleDeactivate(a.id)}
-                      >
-                        Deactivate
-                      </Button>
-                    )}
+            <div>
+              {announcements.map((a, i) => (
+                <div
+                  key={a.id}
+                  style={{
+                    padding: "18px 0",
+                    borderTop: i === 0 ? "none" : "1px solid #161616",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 7 }}>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: "var(--fg)" }}>
+                      {a.title}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 10.5,
+                        fontWeight: 600,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        padding: "3px 8px",
+                        borderRadius: 6,
+                        fontFamily: "var(--font-mono)",
+                        background: "#161616",
+                        color: "#a1a1a1",
+                        border: "1px solid #1e1e1e",
+                      }}
+                    >
+                      {a.target}
+                    </span>
+                    <span
+                      style={{
+                        marginLeft: "auto",
+                        fontSize: 12,
+                        color: "#5a5a5a",
+                        fontFamily: "var(--font-mono)",
+                      }}
+                    >
+                      {formatDate(a.created_at)}
+                    </span>
                   </div>
-                );
-              })}
+                  <p style={{ fontSize: 13.5, color: "#a1a1a1", lineHeight: 1.55, maxWidth: 720, margin: "0 0 8px" }}>
+                    {a.message}
+                  </p>
+                  {a.is_active && (
+                    <button
+                      onClick={() => handleDeactivate(a.id)}
+                      style={{
+                        height: 28,
+                        padding: "0 12px",
+                        borderRadius: 999,
+                        fontSize: 12,
+                        background: "#161616",
+                        color: "#888",
+                        border: "1px solid #1e1e1e",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Deactivate
+                    </button>
+                  )}
+                  {!a.is_active && (
+                    <span style={{ fontSize: 12, color: "#5a5a5a" }}>Deactivated</span>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </Card>
-      </Reveal>
+      </div>
+    </Reveal>
+  );
+}
+
+// ─── User Detail Modal ─────────────────────────────────────────────────────────
+
+function UserDetailModal({
+  detail,
+  loading,
+  onClose,
+  apiFetch,
+  onUpdate,
+}: {
+  detail: UserDetail | null;
+  loading: boolean;
+  onClose: () => void;
+  apiFetch: ApiFetch;
+  onUpdate: () => void;
+}) {
+  const [newPlan, setNewPlan] = useState("");
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [revoking, setRevoking] = useState(false);
+  const [planError, setPlanError] = useState("");
+
+  useEffect(() => {
+    if (detail?.profile?.plan) setNewPlan(detail.profile.plan);
+    setConfirmEmail("");
+    setPlanError("");
+  }, [detail]);
+
+  // Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const savePlan = async () => {
+    if (!detail) return;
+    setSavingPlan(true);
+    setPlanError("");
+    try {
+      const r = await apiFetch(`/api/admin/users/${detail.profile.clerk_user_id}/plan`, {
+        method: "PATCH",
+        body: JSON.stringify({ plan: newPlan }),
+      });
+      const d = await r.json();
+      if (d.success) onUpdate();
+      else setPlanError(d.error ?? "Failed to update");
+    } finally {
+      setSavingPlan(false);
+    }
+  };
+
+  const revokeAccess = async () => {
+    if (!detail) return;
+    setRevoking(true);
+    try {
+      await apiFetch(`/api/admin/users/${detail.profile.clerk_user_id}/access`, {
+        method: "DELETE",
+      });
+      onUpdate();
+      onClose();
+    } finally {
+      setRevoking(false);
+    }
+  };
+
+  const email = detail?.clerk_metadata?.email || detail?.profile?.email || "";
+  const confirmValid = confirmEmail.trim().toLowerCase() === email.toLowerCase();
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 80,
+        background: "rgba(0,0,0,0.6)",
+        backdropFilter: "blur(6px)",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        padding: "56px 24px",
+        overflowY: "auto",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 720,
+          background: "#111",
+          border: "1px solid #1e1e1e",
+          borderRadius: 16,
+          animation: "aw-rise 150ms cubic-bezier(0.32, 0.72, 0, 1)",
+        }}
+      >
+        {/* Modal head */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 16,
+            padding: 24,
+            borderBottom: "1px solid #1e1e1e",
+          }}
+        >
+          {loading ? (
+            <div style={{ color: "#888", fontSize: 13 }}>Loading…</div>
+          ) : detail ? (
+            <>
+              <UserAvatar name={detail.profile.display_name || email} size={52} />
+              <div>
+                <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em", color: "var(--fg)" }}>
+                  {detail.profile.display_name || "—"}
+                </div>
+                <div style={{ fontSize: 13, color: "#888", fontFamily: "var(--font-mono)", marginTop: 2 }}>
+                  {email}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 9 }}>
+                  <PlanChip plan={detail.profile.plan} />
+                  <span style={{ color: "#5a5a5a", fontSize: 12 }}>·</span>
+                  <span style={{ color: "#888", fontSize: 12.5 }}>
+                    Joined {formatDate(detail.profile.created_at)}
+                  </span>
+                  <span style={{ color: "#5a5a5a", fontSize: 12 }}>·</span>
+                  <span style={{ color: "#888", fontSize: 12.5 }}>
+                    {detail.recent_scans.length} recent scans shown
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : null}
+          <button
+            onClick={onClose}
+            style={{
+              marginLeft: "auto",
+              background: "none",
+              border: "1px solid #1e1e1e",
+              borderRadius: 8,
+              width: 32,
+              height: 32,
+              color: "#888",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <X style={{ width: 16, height: 16 }} />
+          </button>
+        </div>
+
+        {detail && (
+          <div style={{ padding: 24 }}>
+            {/* Plan change */}
+            <div style={{ marginBottom: 26 }}>
+              <FormLabel>Change plan</FormLabel>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
+                <div style={{ flex: 1, maxWidth: 260 }}>
+                  <AdminSelect
+                    value={newPlan}
+                    onChange={setNewPlan}
+                    options={[
+                      { value: "free", label: "Free" },
+                      { value: "pro", label: "Pro" },
+                      { value: "business", label: "Business" },
+                    ]}
+                    full
+                  />
+                </div>
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={savePlan}
+                  disabled={savingPlan || newPlan === detail.profile.plan}
+                >
+                  {savingPlan ? "Saving…" : "Save changes"}
+                </Button>
+              </div>
+              {planError && (
+                <p style={{ fontSize: 12, color: "#E5484D", marginTop: 6 }}>{planError}</p>
+              )}
+            </div>
+
+            {/* Recent scans */}
+            <div style={{ marginBottom: 26 }}>
+              <FormLabel style={{ marginBottom: 10 }}>Recent scans</FormLabel>
+              <Card style={{ overflow: "hidden" }}>
+                <TblHead cols="1.6fr 0.6fr 0.9fr 1fr">
+                  <div>Address</div>
+                  <div>Chain</div>
+                  <div>Score</div>
+                  <div>Date</div>
+                </TblHead>
+                {detail.recent_scans.length === 0 ? (
+                  <div style={{ padding: "20px 22px", color: "#888", fontSize: 13 }}>No scans.</div>
+                ) : (
+                  detail.recent_scans.map((s) => {
+                    const label = s.risk_label?.toLowerCase() || "";
+                    const tone = label === "safe" || label === "low"
+                      ? "safe"
+                      : label === "medium" || label === "med"
+                      ? "medium"
+                      : "high";
+                    return (
+                      <TblRow key={s.id} cols="1.6fr 0.6fr 0.9fr 1fr">
+                        <div style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, color: "#a1a1a1" }}>
+                          {s.wallet_address.slice(0, 6)}…{s.wallet_address.slice(-4)}
+                        </div>
+                        <div style={{ fontFamily: "var(--font-mono)", color: "#a1a1a1", fontSize: 12.5 }}>
+                          {s.chain?.toUpperCase()}
+                        </div>
+                        <div>
+                          <Chip tone={tone} dot>{s.risk_label?.toUpperCase() || String(s.risk_score)}</Chip>
+                        </div>
+                        <div style={{ color: "#888", fontSize: 12.5 }}>{formatDate(s.created_at)}</div>
+                      </TblRow>
+                    );
+                  })
+                )}
+              </Card>
+            </div>
+
+            {/* Danger zone */}
+            <div
+              style={{
+                border: "1px solid rgba(229,72,77,0.4)",
+                background: "rgba(229,72,77,0.07)",
+                borderRadius: 12,
+                padding: 20,
+              }}
+            >
+              <div
+                style={{
+                  color: "#E5484D",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 6,
+                }}
+              >
+                <AlertTriangle style={{ width: 16, height: 16 }} />
+                Danger zone
+              </div>
+              <p style={{ fontSize: 12.5, color: "#a1a1a1", lineHeight: 1.5, marginBottom: 16 }}>
+                Revoking access immediately signs this user out and disables their plan. This cannot be undone.
+              </p>
+              <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
+                <input
+                  value={confirmEmail}
+                  onChange={(e) => setConfirmEmail(e.target.value)}
+                  placeholder="Type user email to confirm"
+                  style={{
+                    flex: 1,
+                    height: 38,
+                    padding: "0 12px",
+                    background: "#0B0B0B",
+                    border: "1px solid rgba(229,72,77,0.3)",
+                    borderRadius: 8,
+                    color: "var(--fg)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 13,
+                    outline: "none",
+                  }}
+                />
+                <button
+                  onClick={revokeAccess}
+                  disabled={!confirmValid || revoking}
+                  style={{
+                    height: 38,
+                    padding: "0 16px",
+                    borderRadius: 999,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    background: confirmValid ? "#E5484D" : "#2A1314",
+                    color: confirmValid ? "#1A0809" : "#7a4042",
+                    border: "none",
+                    cursor: confirmValid ? "pointer" : "not-allowed",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {revoking ? "Revoking…" : "Revoke access"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-// ---------- helpers ----------
-function relTime(ts: number) {
-  const diff = Date.now() - ts;
-  const m = Math.floor(diff / 60_000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
+// ─── Shared sub-components ────────────────────────────────────────────────────
+
+type ApiFetch = (path: string, opts?: RequestInit) => Promise<Response>;
+
+function TblHead({ cols, children }: { cols: string; children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: cols,
+        gap: 14,
+        padding: "13px 22px",
+        fontSize: 10.5,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        color: "#5a5a5a",
+        fontWeight: 500,
+        background: "#0B0B0B",
+        borderBottom: "1px solid #1e1e1e",
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
-function Stat({
-  label,
-  value,
-  suffix,
-}: {
-  label: string;
-  value: number;
-  suffix?: string;
-}) {
+function TblRow({ cols, children }: { cols: string; children: React.ReactNode }) {
   return (
-    <Card hover>
-      <Eyebrow>{label}</Eyebrow>
-      <div className="text-white font-bold mt-3 tracking-tight mono text-[28px] md:text-[32px]">
-        <CountUp to={value} />
-        {suffix}
-      </div>
-    </Card>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: cols,
+        gap: 14,
+        padding: "13px 22px",
+        fontSize: 13,
+        borderTop: "1px solid #161616",
+        transition: "background 150ms",
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#161616"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function UserAvatar({ name, size = 34 }: { name: string; size?: number }) {
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        flexShrink: 0,
+        background: "#161616",
+        border: "1px solid #1e1e1e",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: size > 40 ? 17 : 12,
+        fontWeight: 600,
+        color: "#a1a1a1",
+      }}
+    >
+      {initials || "?"}
+    </div>
+  );
+}
+
+function PlanChip({ plan }: { plan: string }) {
+  const styles: Record<string, { bg: string; color: string; border: string }> = {
+    free:     { bg: "#1A1A1A", color: "#a1a1a1", border: "#262626" },
+    pro:      { bg: "rgba(29,158,117,0.10)", color: "var(--accent)", border: "rgba(29,158,117,0.30)" },
+    business: { bg: "rgba(29,158,117,0.16)", color: "#2fc792", border: "rgba(29,158,117,0.5)" },
+  };
+  const s = styles[plan?.toLowerCase()] ?? styles.free;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        height: 22,
+        padding: "0 9px",
+        borderRadius: 6,
+        fontSize: 11,
+        fontWeight: 500,
+        fontFamily: "var(--font-mono)",
+        background: s.bg,
+        color: s.color,
+        border: `1px solid ${s.border}`,
+      }}
+    >
+      {plan?.toUpperCase() || "FREE"}
+    </span>
+  );
+}
+
+function TokenStatusChip({ status }: { status: "used" | "unused" | "expired" }) {
+  const cfg = {
+    used:    { color: "var(--accent)", bg: "rgba(29,158,117,0.10)", dot: "var(--accent)" },
+    unused:  { color: "#a1a1a1", bg: "#1A1A1A", dot: "#5a5a5a" },
+    expired: { color: "#E5484D", bg: "rgba(229,72,77,0.10)", dot: "#E5484D" },
+  }[status];
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        height: 22,
+        padding: "0 9px",
+        borderRadius: 6,
+        fontSize: 11,
+        fontWeight: 500,
+        fontFamily: "var(--font-mono)",
+        background: cfg.bg,
+        color: cfg.color,
+        border: "1px solid #262626",
+      }}
+    >
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot }} />
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+}
+
+function ApiStatusChip({ status }: { status: "ok" | "degraded" | "down" }) {
+  const cfg = {
+    ok:       { label: "Operational", color: "var(--accent)", bg: "rgba(29,158,117,0.10)", dot: "var(--accent)" },
+    degraded: { label: "Degraded",    color: "#F5A623",        bg: "rgba(245,166,35,0.10)", dot: "#F5A623" },
+    down:     { label: "Down",        color: "#E5484D",        bg: "rgba(229,72,77,0.10)",  dot: "#E5484D" },
+  }[status];
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        height: 22,
+        padding: "0 9px",
+        borderRadius: 6,
+        fontSize: 11,
+        fontWeight: 500,
+        fontFamily: "var(--font-mono)",
+        background: cfg.bg,
+        color: cfg.color,
+        border: "1px solid #262626",
+      }}
+    >
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot }} />
+      {cfg.label}
+    </span>
+  );
+}
+
+function StatusDot({ active }: { active: boolean }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+      <span
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: "50%",
+          background: active ? "var(--accent)" : "#5a5a5a",
+        }}
+      />
+      <span style={{ color: active ? "#a1a1a1" : "#888" }}>{active ? "Active" : "Banned"}</span>
+    </span>
   );
 }
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <Card hover>
-      <Eyebrow>{label}</Eyebrow>
-      <div className="text-white font-bold mt-3 tracking-tight mono text-[36px]">
+    <div
+      style={{
+        background: "#111",
+        border: "1px solid #1e1e1e",
+        borderRadius: 12,
+        padding: 22,
+      }}
+    >
+      <div style={{ fontSize: 12, color: "#888", marginBottom: 12 }}>{label}</div>
+      <div
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 38,
+          fontWeight: 600,
+          letterSpacing: "-0.03em",
+          lineHeight: 1,
+          color: "var(--fg)",
+        }}
+      >
         <CountUp to={value} />
       </div>
-    </Card>
+    </div>
   );
 }
 
-function LoadingState() {
+function AdminSelect({
+  value,
+  onChange,
+  options,
+  full,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  full?: boolean;
+}) {
   return (
-    <div className="py-12 text-center text-[13px] text-[color:var(--fg-tertiary)]">
+    <div
+      style={{
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "center",
+        background: "#0B0B0B",
+        border: "1px solid #1e1e1e",
+        borderRadius: 8,
+        height: 38,
+        width: full ? "100%" : undefined,
+      }}
+    >
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          appearance: "none",
+          background: "none",
+          border: "none",
+          outline: "none",
+          color: "#a1a1a1",
+          fontFamily: "inherit",
+          fontSize: 13,
+          height: "100%",
+          padding: "0 32px 0 12px",
+          cursor: "pointer",
+          width: full ? "100%" : undefined,
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      <span
+        style={{
+          position: "absolute",
+          right: 12,
+          top: "50%",
+          width: 7,
+          height: 7,
+          pointerEvents: "none",
+          borderRight: "1.5px solid #5a5a5a",
+          borderBottom: "1.5px solid #5a5a5a",
+          transform: "translateY(-65%) rotate(45deg)",
+        }}
+      />
+    </div>
+  );
+}
+
+function InputText({
+  mono,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { mono?: boolean }) {
+  return (
+    <input
+      {...props}
+      style={{
+        width: "100%",
+        height: 38,
+        padding: "0 12px",
+        background: "#0B0B0B",
+        border: "1px solid #1e1e1e",
+        borderRadius: 8,
+        color: "var(--fg)",
+        fontFamily: mono ? "var(--font-mono)" : "inherit",
+        fontSize: 13,
+        outline: "none",
+        ...(props.style || {}),
+      }}
+    />
+  );
+}
+
+function FormLabel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <label
+      style={{
+        display: "block",
+        fontSize: 12,
+        fontWeight: 500,
+        color: "#888",
+        marginBottom: 7,
+        ...style,
+      }}
+    >
+      {children}
+    </label>
+  );
+}
+
+function TabLoading() {
+  return (
+    <div style={{ padding: "48px 0", textAlign: "center", color: "#888", fontSize: 13 }}>
       Loading…
     </div>
   );
 }
 
-function ErrorState({ message }: { message: string }) {
+function TabError({ message }: { message: string }) {
   return (
-    <div className="py-12 text-center text-[13px]" style={{ color: "#E53E3E" }}>
+    <div style={{ padding: "48px 0", textAlign: "center", color: "#E5484D", fontSize: 13 }}>
       {message}
     </div>
   );
 }
 
-function SortHeader({
-  label,
-  active,
-  dir,
-  onClick,
-  className,
-  align,
-}: {
-  label: string;
-  active: boolean;
-  dir: "asc" | "desc";
-  onClick: () => void;
-  className?: string;
-  align?: "right";
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`aw-sort ${className || ""}`}
-      style={{ textAlign: align === "right" ? "right" : "left", justifyContent: align === "right" ? "flex-end" : "flex-start" }}
-    >
-      <span>{label}</span>
-      {active ? (
-        dir === "asc" ? (
-          <ChevronUp className="w-3 h-3" />
-        ) : (
-          <ChevronDown className="w-3 h-3" />
-        )
-      ) : null}
-    </button>
-  );
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
