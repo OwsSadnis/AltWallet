@@ -2,6 +2,7 @@
 import { Card, Chip, Eyebrow, Button, IconBtn } from "@/components/aw/Primitives";
 import { Reveal, CountUp } from "@/components/aw/motion";
 import { ChainBadge } from "@/components/aw/ResultCards";
+import { ChainLogo } from "@/components/aw/WalletInputBar";
 import { CHAINS, ChainCode, riskFromScore, generateScan } from "@/lib/constants";
 import { Download, RotateCw, ExternalLink, Lock } from "lucide-react";
 import { useLocation } from "wouter";
@@ -147,11 +148,7 @@ export default function Dashboard() {
                   className="rounded-lg border p-3 flex items-center gap-2"
                   style={{ borderColor: "#1a1a1a", background: "#0E0E0E" }}
                 >
-                  <span
-                    className="aw-chain-dot"
-                    style={{ background: c.color }}
-                    aria-hidden
-                  />
+                  <ChainLogo code={c.code} size={16} />
                   <span className="text-white text-[13px] font-medium">
                     {c.code}
                   </span>
