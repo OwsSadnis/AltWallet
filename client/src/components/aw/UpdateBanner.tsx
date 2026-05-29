@@ -38,7 +38,7 @@ export function UpdateBanner() {
       }}
     >
       <span style={{ color: "#ccc", fontSize: 13, flexShrink: 1 }}>
-        Updates were recently added — click to refresh. Your scan results are saved in History.
+        Updates were recently added — click to refresh. Your scan results are saved in History for Pro & Business users.
       </span>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         <button
