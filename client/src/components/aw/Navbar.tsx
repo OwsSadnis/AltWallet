@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Globe, Menu, X, Check, ArrowRight } from "lucide-react";
+import { useAuth, useUser } from "@clerk/clerk-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
 import { useI18n, LANGS, LangCode } from "@/i18n";
@@ -12,6 +13,9 @@ import { useI18n, LANGS, LangCode } from "@/i18n";
 export function Navbar() {
   const [location] = useLocation();
   const { lang, setLang, t } = useI18n();
+  const { isSignedIn } = useAuth();
+  const { user } = useUser();
+  const isAdmin = isSignedIn && user?.publicMetadata?.role === "admin";
   const [scrolled, setScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -78,6 +82,14 @@ export function Navbar() {
                   {l.label}
                 </Link>
               ))}
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className={cn("aw-nav-link", isActive("/admin") && "active")}
+                >
+                  Admin
+                </Link>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -178,6 +190,16 @@ export function Navbar() {
                   <ArrowRight className="w-4 h-4 opacity-50" />
                 </Link>
               ))}
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className={cn("aw-drawer-link", isActive("/admin") && "text-white")}
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  Admin
+                  <ArrowRight className="w-4 h-4 opacity-50" />
+                </Link>
+              )}
             </nav>
 
             <div className="mt-6">
