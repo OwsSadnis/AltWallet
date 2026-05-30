@@ -1986,3 +1986,242 @@ html[dir="rtl"] .aw-drawer-link:hover { padding-left: 4px; padding-right: 10px; 
   .aw-port-th-r:last-child { padding-right: 16px !important; }
   .aw-port-disclaimer { padding: 16px 16px 4px; }
 }
+
+
+/* ==========================================================
+   Scan History (/history) — page styles
+   ========================================================== */
+
+.sh-page { max-width: 980px; }
+
+/* ---- Page header ---- */
+.sh-head { margin-bottom: 22px; }
+.sh-head h1 {
+  font-size: 20px; font-weight: 600; letter-spacing: -0.01em;
+  color: #fff; margin: 0;
+}
+.sh-head p { font-size: 13px; color: #555; margin: 5px 0 0; line-height: 1.5; }
+
+/* ---- Controls row ---- */
+.sh-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+
+.sh-search {
+  flex: 1; min-width: 200px; display: flex; align-items: center; gap: 9px;
+  background: #111; border: 1px solid #1f1f1f; border-radius: 8px;
+  height: 38px; padding: 0 12px;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.sh-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ghost); }
+.sh-search svg { width: 15px; height: 15px; color: #555; stroke-width: 1.75; flex-shrink: 0; }
+.sh-search input {
+  flex: 1; min-width: 0; background: transparent; border: none; outline: none;
+  color: #e5e5e5; font-family: inherit; font-size: 13px; height: 100%; padding: 0;
+}
+.sh-search input::placeholder { color: #555; }
+
+/* chain filter pills */
+.sh-chainfilter { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sh-pill {
+  height: 30px; padding: 0 12px; border-radius: 20px;
+  background: transparent; border: 1px solid #1f1f1f; color: #888;
+  font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out),
+              background var(--dur-fast) var(--ease-out);
+}
+.sh-pill:hover { color: #e5e5e5; border-color: #2a2a2a; }
+.sh-pill.active { border-color: #1D9E75; color: #1D9E75; background: #0f1f1a; }
+
+/* sort dropdown */
+.sh-sort { position: relative; flex-shrink: 0; }
+.sh-sort select {
+  appearance: none; -webkit-appearance: none;
+  height: 38px; padding: 0 32px 0 12px; border-radius: 8px;
+  background: #111; border: 1px solid #1f1f1f; color: #888;
+  font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast);
+}
+.sh-sort:hover select { color: #e5e5e5; border-color: #2a2a2a; }
+.sh-sort select:focus { outline: none; border-color: var(--accent); }
+
+/* ---- List header ---- */
+.sh-listhead {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px; height: 28px;
+}
+.sh-count {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 10px;
+  border-radius: 999px; background: #141414; border: 1px solid #1f1f1f;
+  color: #555; font-size: 11px; font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.sh-export {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; border: none; color: #888;
+  font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+  padding: 6px 8px; border-radius: 6px;
+  transition: color var(--dur-fast), background var(--dur-fast);
+}
+.sh-export:hover:not(:disabled) { color: #e5e5e5; background: #141414; }
+.sh-export:disabled { opacity: 0.4; cursor: default; }
+.sh-export svg { width: 14px; height: 14px; stroke-width: 1.75; }
+
+/* ---- Scan list ---- */
+.sh-list { display: flex; flex-direction: column; gap: 8px; }
+
+.sh-card {
+  display: flex; align-items: center; gap: 14px;
+  background: #0e0e0e; border: 1px solid #1a1a1a; border-radius: 10px;
+  padding: 14px 16px;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.sh-card:hover { border-color: #2a2a2a; }
+
+/* chain logo */
+.sh-chainlogo {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; font-family: var(--font-mono); font-weight: 600;
+  letter-spacing: 0.02em; flex-shrink: 0; user-select: none;
+}
+
+/* main */
+.sh-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.sh-labelrow { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.sh-label {
+  font-size: 13px; font-weight: 500; color: #e5e5e5;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sh-label.fallback { color: #666; font-family: var(--font-mono); }
+.sh-pencil {
+  background: none; border: none; padding: 2px; cursor: pointer;
+  color: #444; display: inline-flex; opacity: 0;
+  transition: opacity var(--dur-fast), color var(--dur-fast);
+  flex-shrink: 0;
+}
+.sh-pencil svg { width: 12px; height: 12px; stroke-width: 1.75; }
+.sh-card:hover .sh-pencil { opacity: 1; }
+.sh-pencil:hover { color: #888; }
+
+.sh-addr {
+  font-family: var(--font-mono); font-size: 11px; color: #444;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* inline edit */
+.sh-editrow { display: flex; align-items: center; gap: 8px; }
+.sh-editinput {
+  flex: 1; min-width: 0; background: #1a1a1a; border: 1px solid #1D9E75;
+  border-radius: 5px; height: 28px; padding: 0 9px;
+  color: #e5e5e5; font-family: inherit; font-size: 13px; font-weight: 500;
+  outline: none;
+}
+.sh-save {
+  flex-shrink: 0; height: 28px; padding: 0 13px; border-radius: 6px;
+  border: none; font-family: inherit; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast);
+}
+.sh-save.dirty { background: #1D9E75; color: #fff; }
+.sh-save.clean { background: #222; color: #555; cursor: default; }
+.sh-cancel {
+  flex-shrink: 0; height: 28px; padding: 0 8px; border-radius: 6px;
+  background: transparent; border: none; color: #555;
+  font-family: inherit; font-size: 11px; cursor: pointer;
+}
+.sh-cancel:hover { color: #888; }
+
+/* right column */
+.sh-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.sh-chainbadge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 11px; color: #888; line-height: 1;
+}
+.sh-chainbadge .sh-chainlogo { flex-shrink: 0; }
+.sh-score {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 22px; padding: 0 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.02em; line-height: 1;
+}
+.sh-score .sh-scoredot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.sh-score .sh-scorenum { font-family: var(--font-mono); font-weight: 500; opacity: 0.85; }
+.sh-retention {
+  font-size: 11px; color: #444; background: #141414; border: 1px solid #1f1f1f;
+  border-radius: 999px; padding: 3px 9px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sh-date {
+  font-size: 11px; color: #444; min-width: 72px; text-align: right;
+  font-variant-numeric: tabular-nums; flex-shrink: 0;
+}
+.sh-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.sh-rescan {
+  height: 28px; padding: 0 12px; border-radius: 6px;
+  background: transparent; border: 1px solid #1f1f1f; color: #888;
+  font-family: inherit; font-size: 11px; font-weight: 500; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: border-color var(--dur-fast), color var(--dur-fast);
+}
+.sh-rescan:hover:not(:disabled) { color: #e5e5e5; border-color: #2a2a2a; }
+.sh-rescan svg { width: 12px; height: 12px; stroke-width: 1.85; }
+.sh-rescan.spinning svg { animation: sh-spin 0.7s linear infinite; }
+@keyframes sh-spin { to { transform: rotate(360deg); } }
+.sh-view {
+  height: 28px; padding: 0 12px; border-radius: 6px;
+  background: #1D9E75; color: #fff; border: none;
+  font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: background var(--dur-fast);
+  white-space: nowrap;
+}
+.sh-view:hover { background: #23B285; }
+
+/* ---- Pagination ---- */
+.sh-pagination {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin-top: 20px;
+}
+.sh-pagebtn {
+  min-width: 30px; height: 30px; padding: 0 10px; border-radius: 6px;
+  background: transparent; border: 1px solid transparent; color: #555;
+  font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  font-variant-numeric: tabular-nums;
+  transition: border-color var(--dur-fast), color var(--dur-fast), background var(--dur-fast);
+}
+.sh-pagebtn:hover:not(:disabled):not(.active) { color: #e5e5e5; border-color: #1f1f1f; }
+.sh-pagebtn.active { background: #1D9E75; color: #fff; cursor: default; }
+.sh-pagebtn:disabled { color: #2a2a2a; cursor: default; }
+.sh-pageellipsis { color: #444; font-size: 12px; padding: 0 2px; user-select: none; }
+
+/* ---- Empty states ---- */
+.sh-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 64px 32px;
+  border: 1px dashed #1f1f1f; border-radius: 12px;
+}
+.sh-empty-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: #111; border: 1px solid #1a1a1a;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+}
+.sh-empty-icon svg { width: 20px; height: 20px; color: #555; stroke-width: 1.6; }
+.sh-empty h3 { font-size: 15px; font-weight: 600; color: #e5e5e5; margin: 0 0 6px; }
+.sh-empty p { font-size: 13px; color: #555; margin: 0; max-width: 360px; line-height: 1.5; }
+.sh-empty .sh-cta {
+  margin-top: 20px; display: inline-flex; align-items: center; gap: 7px;
+  height: 36px; padding: 0 16px; border-radius: 999px;
+  background: #1D9E75; color: #fff; border: none;
+  font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background var(--dur-fast);
+}
+.sh-empty .sh-cta:hover { background: #23B285; }
+.sh-empty .sh-cta svg { width: 15px; height: 15px; stroke-width: 2; }
+
+.sh-empty.filtered { border-style: solid; border-color: #1a1a1a; background: #0e0e0e; padding: 48px 32px; }
+
+/* ---- Mobile ---- */
+@media (max-width: 700px) {
+  .sh-right { display: none; }
+  .sh-controls { flex-direction: column; align-items: stretch; }
+  .sh-chainfilter { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; scrollbar-width: none; }
+  .sh-chainfilter::-webkit-scrollbar { display: none; }
+}
