@@ -408,8 +408,7 @@ export default function History() {
 
   return (
     <div className="container" style={{ paddingTop: 32, paddingBottom: 80 }}>
-      <div className="sh-page">
-        <div className="sh-head">
+      <div className="sh-head">
           <h1>Scan History</h1>
           <p>All wallets you've checked — edit labels, rescan, or view full results.</p>
         </div>
@@ -489,7 +488,6 @@ export default function History() {
             <Pagination page={safePage} pages={pages} onPage={setPage} />
           </>
         )}
-      </div>
     </div>
   );
 }

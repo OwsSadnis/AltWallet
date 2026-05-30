@@ -33,6 +33,7 @@ function formatDate(iso: string): string {
 // ════════════════════════════════════════════════════════════════════════════
 historyRouter.get("/", async (req: Request, res: Response) => {
   const userId = getUserId(req);
+  console.log("[GET /api/history] userId:", userId);
   if (!userId) {
     return res.status(401).json({ error: "Unauthorized" });
   }
@@ -91,7 +92,10 @@ historyRouter.get("/", async (req: Request, res: Response) => {
       totalPages,
     });
   } catch (err: any) {
-    console.error("[GET /api/history] Error:", err?.message ?? err);
+    console.error("[GET /api/history] Full error:", err);
+    console.error("[GET /api/history] Error code:", err?.code);
+    console.error("[GET /api/history] Error details:", err?.details);
+    console.error("[GET /api/history] Error hint:", err?.hint);
     return res.status(500).json({ error: "Failed to fetch history" });
   }
 });
