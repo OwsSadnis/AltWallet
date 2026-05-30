@@ -129,6 +129,16 @@ app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 // ─── CLERK MIDDLEWARE (after body parsers, before protected routes) ───────────
 app.use(clerkMiddleware());
 
+// ─── DEBUG / HEALTH (before all other routes) ────────────────────────────────
+app.get("/api/debug", (_req, res) => {
+  res.json({
+    ok: true,
+    supabase: !!process.env.SUPABASE_URL,
+    clerk: !!process.env.CLERK_SECRET_KEY,
+    serviceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+  });
+});
+
 // ─── API ROUTES ───────────────────────────────────────────────────────────────
 app.use("/api/redeem", redeemRouter);
 app.use("/api/scan", ipDailyLimiter, scanLimiter, scanRouter);
