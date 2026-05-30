@@ -1992,7 +1992,7 @@ html[dir="rtl"] .aw-drawer-link:hover { padding-left: 4px; padding-right: 10px; 
    Scan History (/history) — page styles
    ========================================================== */
 
-.sh-page { max-width: 980px; }
+.sh-page { max-width: 900px; margin: 0 auto; }
 
 /* ---- Page header ---- */
 .sh-head { margin-bottom: 22px; }

@@ -407,7 +407,7 @@ export default function History() {
   const hasAny = scans.length > 0;
 
   return (
-    <div className="container" style={{ paddingTop: 40, paddingBottom: 80 }}>
+    <div className="container" style={{ paddingTop: 32, paddingBottom: 80 }}>
       <div className="sh-page">
         <div className="sh-head">
           <h1>Scan History</h1>

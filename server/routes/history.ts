@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { getAuth } from "@clerk/backend";
+import { getAuth } from "@clerk/express";
 import { createClient } from "@supabase/supabase-js";
 
 const historyRouter = Router();
