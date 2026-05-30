@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@clerk/clerk-react";
 import { Search, Download, Pencil, RefreshCw, ArrowRight, FilterX, SearchX } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Eyebrow } from "@/components/aw/Primitives";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -409,8 +410,13 @@ export default function History() {
   return (
     <div className="container" style={{ paddingTop: 32, paddingBottom: 80 }}>
       <div className="sh-head">
-          <h1>Scan History</h1>
-          <p>All wallets you've checked — edit labels, rescan, or view full results.</p>
+          <Eyebrow>History</Eyebrow>
+          <h1
+            className="text-white font-extrabold tracking-tight"
+            style={{ fontSize: 34, letterSpacing: "-0.03em", lineHeight: 1 }}
+          >
+            Scan History
+          </h1>
         </div>
 
         <div className="sh-controls">
