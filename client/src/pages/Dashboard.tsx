@@ -343,7 +343,7 @@ function SlotChainSelector({
             aria-hidden
           />
         )}
-        <span className="font-semibold text-sm tracking-tight">
+        <span className="hidden sm:inline font-semibold text-sm tracking-tight">
           {value === "AUTO" ? "Auto" : value}
         </span>
         <ChevronDown
@@ -525,15 +525,6 @@ function QuickScanCard({
             : "Add another wallet"}
         </span>
       </button>
-      <div
-        className="text-[color:var(--fg-tertiary)] leading-relaxed"
-        style={{ fontSize: 12.5, marginTop: 14 }}
-      >
-        Auto-detect enabled —{" "}
-        <span className="text-[color:var(--accent)] mono" style={{ fontSize: 11.5 }}>
-          ETH, BTC, SOL, TRX, XRP, SUI
-        </span>
-      </div>
     </Card>
   );
 }
@@ -852,7 +843,7 @@ function ChainCoverageCard() {
             style={{ background: "#0E0E0E", borderColor: "#1a1a1a" }}
           >
             <ChainLogo code={c.code} size={18} />
-            <span className="hidden sm:inline text-[13px] font-medium text-white shrink-0">{c.code}</span>
+            <span className="text-[13px] font-medium text-white shrink-0">{c.code}</span>
             {c.beta && (
               <Chip tone="beta" className="ml-auto shrink-0 text-[10px]">
                 BETA
