@@ -284,7 +284,6 @@ function SlotChainSelector({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const options: Array<{ code: ChainOpt; label: string }> = [
-    { code: "AUTO", label: "Auto-detect" },
     ...CHAINS.map((c) => ({ code: c.code as ChainOpt, label: c.name })),
   ];
 
@@ -481,9 +480,22 @@ function QuickScanCard({
                 <input
                   ref={i === 0 ? scanRef : undefined}
                   className="flex-1 min-w-0 bg-transparent outline-none mono text-[14px] text-white placeholder:text-[color:var(--fg-tertiary)]"
-                  placeholder="Paste wallet address..."
+                  placeholder="Paste address — chain auto-detected"
                   value={slot.addr}
-                  onChange={(e) => update(slot.id, { addr: e.target.value })}
+                  onChange={(e) => {
+                    const addr = e.target.value;
+                    const v = addr.trim();
+                    let detected: ChainOpt = "AUTO";
+                    if (v) {
+                      if (v.startsWith("T") && v.length === 34) detected = "TRX";
+                      else if (v.startsWith("1") || v.startsWith("3") || v.startsWith("bc1")) detected = "BTC";
+                      else if (v.startsWith("r") && v.length >= 25 && v.length <= 35) detected = "XRP";
+                      else if (v.length === 66 && v.startsWith("0x")) detected = "SUI";
+                      else if (v.length >= 32 && v.length <= 44 && !v.startsWith("0x") && /^[1-9A-HJ-NP-Za-km-z]+$/.test(v)) detected = "SOL";
+                      else if (v.startsWith("0x") && v.length === 42) detected = "ETH";
+                    }
+                    update(slot.id, { addr, chain: detected });
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleScan();
                   }}
