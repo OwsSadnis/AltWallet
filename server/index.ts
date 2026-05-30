@@ -127,7 +127,9 @@ app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 
 // ─── CLERK MIDDLEWARE (after body parsers, before protected routes) ───────────
-app.use(clerkMiddleware());
+app.use(clerkMiddleware({
+  publishableKey: process.env.CLERK_PUBLISHABLE_KEY ?? process.env.VITE_CLERK_PUBLISHABLE_KEY,
+}));
 
 // ─── DEBUG / HEALTH (before all other routes) ────────────────────────────────
 app.get("/api/debug", (_req, res) => {
