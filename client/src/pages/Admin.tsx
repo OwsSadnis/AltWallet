@@ -397,34 +397,74 @@ function UsersTab({ apiFetch }: { apiFetch: ApiFetch }) {
 
 function TokenGeneratorTab({ apiFetch }: { apiFetch: ApiFetch }) {
   const [mode, setMode] = useState<"beta_tester" | "special_package">("beta_tester");
-  const [plan, setPlan] = useState("pro");
-  const [email, setEmail] = useState("");
-  const [note, setNote] = useState("");
-  const [expiresDays, setExpiresDays] = useState(365);
+
+  // Beta Tester fields
+  const [btName, setBtName] = useState("");
+  const [btPlan, setBtPlan] = useState("pro");
+  const [btQty, setBtQty] = useState(1);
+  const [btNote, setBtNote] = useState("");
+
+  // Special Package fields
+  const [spLabel, setSpLabel] = useState("");
+  const [spPlan, setSpPlan] = useState("pro");
+  const [spFeatures, setSpFeatures] = useState({
+    ai_summary: false,
+    pdf_export: false,
+    csv_export: false,
+    team_seats: false,
+  });
+
+  // Shared expiry state
+  const [expiryPreset, setExpiryPreset] = useState<"30" | "60" | "90" | "custom">("30");
+  const [customExpiry, setCustomExpiry] = useState(45);
+  const [customUnit, setCustomUnit] = useState<"days" | "months">("days");
+
   const [generating, setGenerating] = useState(false);
   const [lastToken, setLastToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
 
+  const getExpiresDays = () => {
+    if (expiryPreset === "custom") {
+      return customUnit === "months" ? customExpiry * 30 : customExpiry;
+    }
+    return Number(expiryPreset);
+  };
+
   const generate = async () => {
     setError("");
     setGenerating(true);
     try {
+      const body: Record<string, unknown> = {
+        mode,
+        plan: mode === "beta_tester" ? btPlan : spPlan,
+        expires_days: getExpiresDays(),
+      };
+      if (mode === "beta_tester") {
+        body.label = btName.trim() || undefined;
+        body.quantity = btQty;
+        body.note = btNote.trim() || undefined;
+      } else {
+        body.label = spLabel.trim() || undefined;
+        body.features = Object.entries(spFeatures)
+          .filter(([, v]) => v)
+          .map(([k]) => k);
+      }
       const r = await apiFetch("/api/admin/tokens/generate", {
         method: "POST",
-        body: JSON.stringify({
-          mode,
-          plan,
-          email: email.trim() || undefined,
-          note: note.trim() || undefined,
-          expires_days: expiresDays,
-        }),
+        body: JSON.stringify(body),
       });
       const d = await r.json();
       if (d.success) {
         setLastToken(d.token.token);
-        setEmail("");
-        setNote("");
+        if (mode === "beta_tester") {
+          setBtName("");
+          setBtNote("");
+          setBtQty(1);
+        } else {
+          setSpLabel("");
+          setSpFeatures({ ai_summary: false, pdf_export: false, csv_export: false, team_seats: false });
+        }
       } else {
         setError(d.error ?? "Failed to generate token");
       }
@@ -442,20 +482,82 @@ function TokenGeneratorTab({ apiFetch }: { apiFetch: ApiFetch }) {
     setTimeout(() => setCopied(false), 1200);
   };
 
-  const EXPIRE_OPTIONS = [
-    { value: 30, label: "30 days" },
-    { value: 60, label: "60 days" },
-    { value: 90, label: "90 days" },
-    { value: 365, label: "1 year" },
-    { value: 36500, label: "Lifetime" },
-  ];
+  const ExpiryRow = () => (
+    <div style={{ gridColumn: "1 / -1" }}>
+      <FormLabel>Expiry</FormLabel>
+      {expiryPreset !== "custom" ? (
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {(["30", "60", "90", "custom"] as const).map((opt) => (
+            <button
+              key={opt}
+              onClick={() => setExpiryPreset(opt)}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 6,
+                border: "1px solid",
+                borderColor: expiryPreset === opt ? "var(--accent)" : "#1e1e1e",
+                background: expiryPreset === opt ? "rgba(29,158,117,0.1)" : "#0B0B0B",
+                color: expiryPreset === opt ? "var(--accent)" : "#888",
+                fontSize: 12.5,
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              {opt === "custom" ? "Custom" : `${opt} days`}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            onClick={() => setExpiryPreset("30")}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 6,
+              border: "1px solid var(--accent)",
+              background: "rgba(29,158,117,0.1)",
+              color: "var(--accent)",
+              fontSize: 12.5,
+              fontWeight: 500,
+              cursor: "pointer",
+            }}
+          >
+            Custom ▾
+          </button>
+          <input
+            type="number"
+            min={1}
+            value={customExpiry}
+            onChange={(e) => setCustomExpiry(Math.max(1, Number(e.target.value)))}
+            style={{
+              width: 72,
+              padding: "6px 10px",
+              borderRadius: 6,
+              border: "1px solid #1e1e1e",
+              background: "#0B0B0B",
+              color: "var(--fg)",
+              fontSize: 13,
+            }}
+          />
+          <AdminSelect
+            value={customUnit}
+            onChange={(v) => setCustomUnit(v as "days" | "months")}
+            options={[
+              { value: "days", label: "Days" },
+              { value: "months", label: "Months" },
+            ]}
+          />
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <Reveal>
       <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
         {/* Generator form */}
         <Card style={{ flex: 1, minWidth: 440, padding: 24 }}>
-          {/* Mode segmented control */}
+          {/* Mode pill tabs */}
           <div
             style={{
               display: "inline-flex",
@@ -488,46 +590,121 @@ function TokenGeneratorTab({ apiFetch }: { apiFetch: ApiFetch }) {
             ))}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px 20px" }}>
-            <div>
-              <FormLabel>Recipient email</FormLabel>
-              <InputText
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="user@example.com"
-                mono
-              />
+          {mode === "beta_tester" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px 20px" }}>
+              <div>
+                <FormLabel>Beta Tester Name *</FormLabel>
+                <InputText
+                  value={btName}
+                  onChange={(e) => setBtName(e.target.value)}
+                  placeholder="e.g. Andi Susanto"
+                />
+              </div>
+              <div>
+                <FormLabel>Plan</FormLabel>
+                <AdminSelect
+                  value={btPlan}
+                  onChange={setBtPlan}
+                  options={[
+                    { value: "pro", label: "Pro" },
+                    { value: "business", label: "Business" },
+                  ]}
+                  full
+                />
+              </div>
+              <div>
+                <FormLabel>Quantity</FormLabel>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={btQty}
+                  onChange={(e) => setBtQty(Math.min(100, Math.max(1, Number(e.target.value))))}
+                  placeholder="1"
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: 7,
+                    border: "1px solid #1e1e1e",
+                    background: "#0B0B0B",
+                    color: "var(--fg)",
+                    fontSize: 13,
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              <div>
+                <FormLabel>Notes (optional)</FormLabel>
+                <InputText
+                  value={btNote}
+                  onChange={(e) => setBtNote(e.target.value)}
+                  placeholder="e.g. Referred by Discord"
+                />
+              </div>
+              <ExpiryRow />
             </div>
-            <div>
-              <FormLabel>Plan</FormLabel>
-              <AdminSelect
-                value={plan}
-                onChange={setPlan}
-                options={[
-                  { value: "pro", label: "Pro" },
-                  { value: "business", label: "Business" },
-                ]}
-                full
-              />
+          )}
+
+          {mode === "special_package" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px 20px" }}>
+              <div>
+                <FormLabel>Label *</FormLabel>
+                <InputText
+                  value={spLabel}
+                  onChange={(e) => setSpLabel(e.target.value)}
+                  placeholder="e.g. VIP Partner"
+                />
+              </div>
+              <div>
+                <FormLabel>Plan</FormLabel>
+                <AdminSelect
+                  value={spPlan}
+                  onChange={setSpPlan}
+                  options={[
+                    { value: "pro", label: "Pro" },
+                    { value: "business", label: "Business" },
+                  ]}
+                  full
+                />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <FormLabel>Features</FormLabel>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 20px", marginTop: 6 }}>
+                  {(
+                    [
+                      { key: "ai_summary", label: "AI Summary" },
+                      { key: "pdf_export", label: "PDF Export" },
+                      { key: "csv_export", label: "CSV Export" },
+                      { key: "team_seats", label: "Team Seats" },
+                    ] as const
+                  ).map(({ key, label }) => (
+                    <label
+                      key={key}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        cursor: "pointer",
+                        fontSize: 13,
+                        color: "var(--fg)",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={spFeatures[key]}
+                        onChange={(e) =>
+                          setSpFeatures((prev) => ({ ...prev, [key]: e.target.checked }))
+                        }
+                        style={{ accentColor: "var(--accent)", width: 15, height: 15 }}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <ExpiryRow />
             </div>
-            <div>
-              <FormLabel>Token duration</FormLabel>
-              <AdminSelect
-                value={String(expiresDays)}
-                onChange={(v) => setExpiresDays(Number(v))}
-                options={EXPIRE_OPTIONS.map((o) => ({ value: String(o.value), label: o.label }))}
-                full
-              />
-            </div>
-            <div>
-              <FormLabel>Notes (internal)</FormLabel>
-              <InputText
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="e.g. Q2 beta cohort"
-              />
-            </div>
-          </div>
+          )}
 
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 24 }}>
             <Button
@@ -537,10 +714,16 @@ function TokenGeneratorTab({ apiFetch }: { apiFetch: ApiFetch }) {
               onClick={generate}
               disabled={generating}
             >
-              {generating ? "Generating…" : "Generate token"}
+              {generating
+                ? "Generating…"
+                : mode === "beta_tester"
+                ? "+ Generate Token"
+                : "+ Generate Special Token"}
             </Button>
             <span style={{ fontSize: 12.5, color: "#888" }}>
-              Token will be emailed via Resend automatically.
+              {mode === "beta_tester"
+                ? "Token format: BETA-AW-XXXX · Not auto-emailed"
+                : "Token can be revoked anytime from Token History"}
             </span>
           </div>
 
@@ -622,7 +805,7 @@ function TokenGeneratorTab({ apiFetch }: { apiFetch: ApiFetch }) {
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span>Format</span>
               <span style={{ fontFamily: "var(--font-mono)", color: "var(--fg)", fontSize: 11 }}>
-                ALTW-XXXXXXXX-XXXX-XXXX
+                BETA-AW-XXXX
               </span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -630,8 +813,8 @@ function TokenGeneratorTab({ apiFetch }: { apiFetch: ApiFetch }) {
               <span style={{ fontFamily: "var(--font-mono)", color: "var(--fg)" }}>Yes</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Email optional</span>
-              <span style={{ fontFamily: "var(--font-mono)", color: "var(--fg)" }}>Yes</span>
+              <span>Auto-emailed</span>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--fg)" }}>No</span>
             </div>
           </div>
         </Card>
