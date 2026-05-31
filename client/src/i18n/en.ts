@@ -127,7 +127,7 @@ export const en: Record<string, string> = {
 
   // Checker
   "checker.eyebrow": "Wallet checker",
-  "checker.sub": "Enter any wallet address to analyse risk, sanctions exposure, mixer contact, and transaction patterns across 6 chains. Free tier = 1 scan per day.",
+  "checker.sub": "Enter any wallet address to analyse risk, sanctions exposure, mixer contact, and transaction patterns across 6 chains. Free tier = 3 scans per day.",
   "checker.scanning": "Scanning",
   "checker.analysing": "Analysing",
   "checker.step_1": "Fetching chain data…",

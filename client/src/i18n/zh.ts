@@ -115,7 +115,7 @@ export const zh: Record<string, string> = {
   "cta.pdf_pro": "Pro 与 Business 可下载 PDF",
 
   "checker.eyebrow": "钱包检查器",
-  "checker.sub": "输入任意钱包地址以分析 6 条链的风险、制裁暴露、混币互动和交易模式。免费层 = 每天 1 次扫描。",
+  "checker.sub": "输入任意钱包地址以分析 6 条链的风险、制裁暴露、混币互动和交易模式。免费层 = 每天 3 次扫描。",
   "checker.scanning": "扫描中",
   "checker.analysing": "分析中",
   "checker.step_1": "获取链上数据…",

@@ -115,7 +115,7 @@ export const id: Record<string, string> = {
   "cta.pdf_pro": "Laporan PDF di paket Pro & Business",
 
   "checker.eyebrow": "Pemeriksa wallet",
-  "checker.sub": "Masukkan alamat wallet apa pun untuk menganalisis risiko, paparan sanksi, interaksi mixer, dan pola transaksi di 6 jaringan. Tier gratis = 1 scan per hari.",
+  "checker.sub": "Masukkan alamat wallet apa pun untuk menganalisis risiko, paparan sanksi, interaksi mixer, dan pola transaksi di 6 jaringan. Tier gratis = 3 scan per hari.",
   "checker.scanning": "Memindai",
   "checker.analysing": "Menganalisis",
   "checker.step_1": "Mengambil data jaringan…",

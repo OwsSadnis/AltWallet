@@ -9,13 +9,13 @@ export default function Pricing() {
   const t = useT();
 
   const COMPARISON = [
-    { feature: t("cmp.scans"), free: "3", pro: t("cmp.unlimited"), business: t("cmp.unlimited") },
+    { feature: t("cmp.scans"), free: "3", pro: "50", business: "200" },
     { feature: t("cmp.history_win"), free: t("cmp.30d"), pro: t("cmp.12m"), business: t("cmp.24m") },
     { feature: t("cmp.score"), free: true, pro: true, business: true },
     { feature: t("cmp.multichain"), free: true, pro: true, business: true },
     { feature: t("cmp.ai_sum"), free: false, pro: true, business: true },
     { feature: t("cmp.pdf"), free: false, pro: true, business: true },
-    { feature: t("cmp.csv"), free: false, pro: false, business: true },
+    { feature: t("cmp.csv"), free: false, pro: true, business: true },
     { feature: t("cmp.seats"), free: "1", pro: "1", business: "3" },
     { feature: t("cmp.support"), free: t("cmp.community"), pro: t("cmp.email"), business: t("cmp.priority") },
   ];
