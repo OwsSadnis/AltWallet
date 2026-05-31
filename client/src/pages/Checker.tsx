@@ -223,7 +223,7 @@ export default function Checker() {
         <>
           <div
             className="hidden md:block"
-            style={{ position: "absolute", top: 0, right: 0, width: 260, zIndex: 10 }}
+            style={{ position: "fixed", top: 70, right: 24, width: 220, zIndex: 10 }}
           >
             <Reveal delay={160}>
               <SampleScanCard onScan={startMultiScan} />
