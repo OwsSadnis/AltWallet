@@ -9,6 +9,7 @@ import { useDashboardStats, useRecentScans, useExportCSV } from "@/hooks/useDash
 import type { DashboardStats, RecentScan } from "@/types/dashboard";
 import { useUser, useClerk } from "@clerk/clerk-react";
 import { useLocation } from "wouter";
+import { useT, useI18n, LANGS } from "@/i18n";
 import { Download, Plus, LogOut, ArrowUpRight, X, Check, ChevronDown, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,21 +38,22 @@ function detectChain(addr: string): ChainCode {
   return "ETH";
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const d = new Date(iso);
   const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000);
   if (diffDays === 0) {
     const h = String(d.getHours()).padStart(2, "0");
     const m = String(d.getMinutes()).padStart(2, "0");
-    return `Today ${h}:${m}`;
+    return t("dash.date_today", { time: `${h}:${m}` });
   }
-  if (diffDays === 1) return "Yesterday";
+  if (diffDays === 1) return t("dash.date_yesterday");
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
+  const t = useT();
   const { user } = useUser();
   const { signOut } = useClerk();
   const [, navigate] = useLocation();
@@ -69,13 +71,13 @@ export default function Dashboard() {
       <Reveal delay={0}>
         <div className="flex items-start justify-between gap-6 mb-8 flex-wrap">
           <div>
-            <Eyebrow>Dashboard</Eyebrow>
+            <Eyebrow>{t("dash.eyebrow")}</Eyebrow>
             <div className="flex items-center gap-3.5 mt-2.5">
               <h1
                 className="text-white font-extrabold tracking-tight"
                 style={{ fontSize: 34, letterSpacing: "-0.03em", lineHeight: 1 }}
               >
-                Welcome back, {firstName}.
+                {t("dash.welcome", { firstName })}
               </h1>
               <span
                 className="inline-flex items-center h-6 px-2.5 rounded-[6px] mono text-[11px] font-semibold tracking-[0.08em] text-[color:var(--accent)]"
@@ -97,14 +99,14 @@ export default function Dashboard() {
               disabled={exportLoading || plan === "free"}
               title={plan === "free" ? "Pro/Business required" : "Export scan history as CSV"}
             >
-              Export CSV
+              {t("dash.export_csv")}
             </Button>
             <Button
               variant="secondary"
               size="md"
               onClick={() => navigate("/pricing")}
             >
-              Upgrade
+              {t("common.upgrade")}
             </Button>
             <Button
               variant="primary"
@@ -112,7 +114,7 @@ export default function Dashboard() {
               icon={Plus}
               onClick={() => scanInputRef.current?.focus()}
             >
-              New Scan
+              {t("common.new_scan")}
             </Button>
             <button
               type="button"
@@ -137,36 +139,33 @@ export default function Dashboard() {
       <Reveal delay={80}>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard
-            label="Total Scans"
+            label={t("dash.stat_total_scans")}
             value={statsLoading ? "—" : String(stats?.total_scans ?? 0)}
-            delta="↑ 18 this week"
+            delta={t("dash.stat_this_week", { n: 18 })}
             deltaTone="green"
             accent
           />
           <StatCard
-            label="Flagged Wallets"
+            label={t("dash.stat_flagged_wallets")}
             value={statsLoading ? "—" : String(stats?.flagged_count ?? 0)}
-            delta="↑ 3 since last scan"
+            delta={t("dash.stat_since_last", { n: 3 })}
             deltaTone="red"
             danger
           />
           <StatCard
-            label="Chains Used"
+            label={t("dash.stat_chains_used")}
             value={statsLoading ? "—" : String(stats?.chains_used.length ?? 0)}
             delta={stats?.chains_used.join(" · ") ?? ""}
             deltaTone="muted"
           />
           <StatCard
-            label="Scans Today"
+            label={t("dash.stat_scans_today")}
             value={
               statsLoading
                 ? "—"
                 : `${stats?.scans_today ?? 0} / ${stats?.daily_limit ?? (plan === "pro" ? 50 : plan === "business" ? 200 : 3)}`
             }
-            delta={`${Math.max(
-              0,
-              (stats?.daily_limit ?? (plan === "pro" ? 50 : plan === "business" ? 200 : 3)) - (stats?.scans_today ?? 0)
-            )} remaining`}
+            delta={t("dash.stat_remaining", { n: Math.max(0, (stats?.daily_limit ?? (plan === "pro" ? 50 : plan === "business" ? 200 : 3)) - (stats?.scans_today ?? 0)) })}
             deltaTone="green"
           />
         </div>
@@ -278,6 +277,7 @@ function SlotChainSelector({
   value: ChainOpt;
   onChange: (v: ChainOpt) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -343,7 +343,7 @@ function SlotChainSelector({
           />
         )}
         <span className="hidden sm:inline font-semibold text-sm tracking-tight">
-          {value === "AUTO" ? "Auto" : value}
+          {value === "AUTO" ? t("dash.auto") : value}
         </span>
         <ChevronDown
           className={cn(
@@ -420,6 +420,7 @@ function QuickScanCard({
   plan: string;
   scanRef: React.RefObject<HTMLInputElement | null>;
 }) {
+  const t = useT();
   const [, navigate] = useLocation();
   const [slots, setSlots] = useState<Slot[]>([{ id: 1, addr: "", chain: "AUTO" }]);
   const seqRef = useRef(1);
@@ -451,7 +452,7 @@ function QuickScanCard({
     <Card>
       <div className="aw-card-head">
         <span className="text-[15px] font-semibold text-white tracking-tight">
-          Quick Scan
+          {t("dash.quickscan")}
         </span>
         <Button
           variant="primary"
@@ -460,7 +461,7 @@ function QuickScanCard({
           disabled={!slots.some((s) => s.addr.trim())}
           trailingIcon={ArrowRight}
         >
-          Scan
+          {t("dash.scan")}
         </Button>
       </div>
       <div className="flex flex-col gap-2.5">
@@ -480,7 +481,7 @@ function QuickScanCard({
                 <input
                   ref={i === 0 ? scanRef : undefined}
                   className="flex-1 min-w-0 bg-transparent outline-none mono text-[14px] text-white placeholder:text-[color:var(--fg-tertiary)]"
-                  placeholder="Paste address — chain auto-detected"
+                  placeholder={t("dash.quickscan_placeholder")}
                   value={slot.addr}
                   onChange={(e) => {
                     const addr = e.target.value;
@@ -531,10 +532,10 @@ function QuickScanCard({
         <Plus className="w-3.5 h-3.5" />
         <span>
           {isFree
-            ? "Available on Pro & Business"
+            ? t("dash.quickscan_pro_only")
             : slots.length >= MAX_SLOTS
-            ? "Maximum 5 wallets"
-            : "Add another wallet"}
+            ? t("dash.quickscan_max")
+            : t("dash.quickscan_add")}
         </span>
       </button>
     </Card>
@@ -550,6 +551,7 @@ function PlanCard({
   plan: string;
   stats: DashboardStats | null;
 }) {
+  const t = useT();
   const limit =
     stats?.daily_limit ?? (plan === "pro" ? 50 : plan === "business" ? 200 : 3);
   const used = stats?.scans_today ?? 0;
@@ -559,20 +561,20 @@ function PlanCard({
   const features =
     plan === "business"
       ? [
-          "200 scans / day",
-          "24-month history",
-          "AI-generated summary",
-          "3 team seats",
-          "PDF + CSV export",
+          t("dash.plan_feat_biz_scans"),
+          t("dash.plan_feat_biz_history"),
+          t("dash.plan_feat_biz_ai"),
+          t("dash.plan_feat_biz_seats"),
+          t("dash.plan_feat_biz_export"),
         ]
       : plan === "pro"
       ? [
-          "Unlimited scans / day",
-          "30-day history",
-          "AI-generated summary",
-          "CSV export",
+          t("dash.plan_feat_pro_scans"),
+          t("dash.plan_feat_pro_history"),
+          t("dash.plan_feat_pro_ai"),
+          t("dash.plan_feat_pro_export"),
         ]
-      : ["3 scans / day", "ETH, BTC, SOL, TRX, XRP, SUI", "Basic risk analysis"];
+      : [t("dash.plan_feat_free_scans"), t("dash.plan_feat_free_chains"), t("dash.plan_feat_free_analysis")];
 
   const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
@@ -592,7 +594,7 @@ function PlanCard({
         className="mono font-medium uppercase text-[color:var(--accent)]"
         style={{ fontSize: 10.5, letterSpacing: "0.14em", marginBottom: 8 }}
       >
-        Current Plan
+        {t("dash.plan_current")}
       </div>
       <div
         className="font-extrabold tracking-tight text-white"
@@ -601,7 +603,7 @@ function PlanCard({
         {planName}
       </div>
       <div className="flex items-baseline justify-between mb-2.5">
-        <span className="text-[13px] text-[color:var(--fg-tertiary)]">Daily scans</span>
+        <span className="text-[13px] text-[color:var(--fg-tertiary)]">{t("dash.plan_daily")}</span>
         <span
           className="mono text-[13px] text-white"
           style={{ fontVariantNumeric: "tabular-nums" }}
@@ -662,6 +664,7 @@ function RecentScansSection({
   onMore: () => void;
   onRow: (addr: string, chain: string) => void;
 }) {
+  const t = useT();
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -669,14 +672,14 @@ function RecentScansSection({
           className="font-semibold text-white tracking-tight"
           style={{ fontSize: 17, letterSpacing: "-0.015em" }}
         >
-          Recent Scans
+          {t("dash.recent_scans")}
         </span>
         <button
           type="button"
           className="text-[color:var(--accent)] text-[12.5px] font-medium hover:underline"
           onClick={onMore}
         >
-          More
+          {t("dash.more")}
         </button>
       </div>
       <Card style={{ padding: 0, overflow: "hidden" }}>
@@ -702,22 +705,22 @@ function RecentScansSection({
           }}
         >
           <div />
-          <div>Wallet</div>
-          <div>Label</div>
-          <div>Score</div>
-          <div>Date</div>
+          <div>{t("dash.col_wallet")}</div>
+          <div>{t("dash.col_label")}</div>
+          <div>{t("dash.col_score")}</div>
+          <div>{t("dash.col_date")}</div>
           <div />
         </div>
 
         {loading && (
           <div className="text-[13px] text-[color:var(--fg-tertiary)] p-5">
-            Loading…
+            {t("common.loading")}…
           </div>
         )}
 
         {!loading && scans.length === 0 && (
           <div className="text-[13px] text-[color:var(--fg-tertiary)] p-5">
-            No scans yet. Use Quick Scan above to get started.
+            {t("dash.no_scans")}
           </div>
         )}
 
@@ -751,7 +754,7 @@ function RecentScansSection({
                     : "text-[color:var(--fg-tertiary)] italic"
                 )}
               >
-                {row.label || "No label"}
+                {row.label || t("dash.no_label")}
               </div>
               <div>
                 {row.risk_score !== null ? (
@@ -765,7 +768,7 @@ function RecentScansSection({
                 )}
               </div>
               <div className="mono text-[12px] text-[color:var(--fg-tertiary)]">
-                {formatDate(row.scanned_at)}
+                {formatDate(row.scanned_at, t)}
               </div>
               <button
                 type="button"
@@ -797,20 +800,23 @@ function AccountSettingsCard({
   user: ReturnType<typeof useUser>["user"];
   plan: string;
 }) {
+  const t = useT();
+  const { lang } = useI18n();
+  const langLabel = LANGS.find((l) => l.code === lang)?.native ?? "English";
   return (
     <Card>
       <div className="aw-card-head">
-        <Eyebrow>Account Settings</Eyebrow>
+        <Eyebrow>{t("dash.acct_settings")}</Eyebrow>
       </div>
       <div className="flex flex-col">
         <KVRow
-          label="Email"
+          label={t("dash.acct_email")}
           value={user?.primaryEmailAddress?.emailAddress ?? "—"}
           mono
         />
-        <KVRow label="Language" value="English" />
+        <KVRow label={t("dash.acct_language")} value={langLabel} />
         <KVRow
-          label="Plan"
+          label={t("dash.acct_plan")}
           value={plan.charAt(0).toUpperCase() + plan.slice(1)}
           accent
         />
@@ -852,10 +858,11 @@ function KVRow({
 // ─── Chain coverage ───────────────────────────────────────────────────────────
 
 function ChainCoverageCard() {
+  const t = useT();
   return (
     <Card>
       <div className="aw-card-head">
-        <Eyebrow>Chain Coverage</Eyebrow>
+        <Eyebrow>{t("dash.chain_coverage")}</Eyebrow>
         <span className="mono text-[12px] text-[color:var(--fg-tertiary)]">
           6 chains
         </span>

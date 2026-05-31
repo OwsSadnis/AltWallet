@@ -7,6 +7,7 @@ import { Search, Download, Pencil, RefreshCw, ArrowRight, FilterX, SearchX } fro
 import { cn } from "@/lib/utils";
 import { Eyebrow } from "@/components/aw/Primitives";
 import { Reveal } from "@/components/aw/motion";
+import { useT } from "@/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,11 +46,11 @@ const CHAIN_STYLES: Record<string, { fg: string; bg: string }> = {
   SUI: { fg: "#4DA2FF", bg: "#0a1830" },
 };
 
-const SORT_LABELS: Record<string, string> = {
-  newest:       "Newest first",
-  oldest:       "Oldest first",
-  "score-high": "Score: high to low",
-  "score-low":  "Score: low to high",
+const SORT_KEYS: Record<string, string> = {
+  newest:       "history.sort_newest",
+  oldest:       "history.sort_oldest",
+  "score-high": "history.sort_score_high",
+  "score-low":  "history.sort_score_low",
 };
 
 const SORT_TO_API: Record<string, string> = {
@@ -85,16 +86,16 @@ function hasRealLabel(scan: Scan): boolean {
   return !!(scan.label?.trim());
 }
 
-function scanDate(iso: string): string {
+function scanDate(iso: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const now = Date.now();
   const diff = now - new Date(iso).getTime();
   const HOUR = 3_600_000, DAY = 86_400_000;
-  if (diff < HOUR) return Math.max(1, Math.round(diff / 60000)) + "m ago";
-  if (diff < DAY)  return Math.round(diff / HOUR) + "h ago";
+  if (diff < HOUR) return t("history.time_m", { n: Math.max(1, Math.round(diff / 60000)) });
+  if (diff < DAY)  return t("history.time_h", { n: Math.round(diff / HOUR) });
   const days = Math.round(diff / DAY);
-  if (days < 7)   return days + "d ago";
-  if (days < 30)  return Math.round(days / 7) + "w ago";
-  return Math.round(days / 30) + "mo ago";
+  if (days < 7)   return t("history.time_d", { n: days });
+  if (days < 30)  return t("history.time_w", { n: Math.round(days / 7) });
+  return t("history.time_mo", { n: Math.round(days / 30) });
 }
 
 // ─── ScanChainLogo ────────────────────────────────────────────────────────────
@@ -131,6 +132,7 @@ interface ScanCardProps {
 }
 
 function ScanCard({ scan, planRetention, isEditing, onStartEdit, onCancelEdit, onSaveLabel, onRescan }: ScanCardProps) {
+  const t = useT();
   const real = hasRealLabel(scan);
   const [draft, setDraft] = useState(scan.label ?? "");
   const [spinning, setSpinning] = useState(false);
@@ -174,11 +176,11 @@ function ScanCard({ scan, planRetention, isEditing, onStartEdit, onCancelEdit, o
               value={draft}
               onChange={e => setDraft(e.target.value)}
               onKeyDown={onKey}
-              placeholder="Add a label…"
+              placeholder={t("history.edit_placeholder")}
               maxLength={50}
             />
-            <button className={cn("sh-save", dirty ? "dirty" : "clean")} onClick={commit}>Save</button>
-            <button className="sh-cancel" onClick={onCancelEdit}>Cancel</button>
+            <button className={cn("sh-save", dirty ? "dirty" : "clean")} onClick={commit}>{t("history.save")}</button>
+            <button className="sh-cancel" onClick={onCancelEdit}>{t("history.cancel")}</button>
           </div>
         ) : (
           <div className="sh-labelrow">
@@ -206,7 +208,7 @@ function ScanCard({ scan, planRetention, isEditing, onStartEdit, onCancelEdit, o
           {risk.label}
           <span className="sh-scorenum">{scan.risk_score}</span>
         </span>
-        <span className="sh-date">{scanDate(scan.scanned_at)}</span>
+        <span className="sh-date">{scanDate(scan.scanned_at, t)}</span>
         <span className="sh-retention" title="Retention period">{planRetention}</span>
         <div className="sh-actions">
           <button
@@ -215,10 +217,10 @@ function ScanCard({ scan, planRetention, isEditing, onStartEdit, onCancelEdit, o
             disabled={spinning}
           >
             <RefreshCw />
-            {spinning ? "Opening…" : "Rescan"}
+            {spinning ? t("history.opening") : t("history.rescan")}
           </button>
           <button className="sh-view" onClick={() => onRescan(scan)}>
-            View detail
+            {t("history.view_detail")}
           </button>
         </div>
       </div>
@@ -229,6 +231,7 @@ function ScanCard({ scan, planRetention, isEditing, onStartEdit, onCancelEdit, o
 // ─── Pagination ───────────────────────────────────────────────────────────────
 
 function Pagination({ page, pages, onPage }: { page: number; pages: number; onPage: (n: number) => void }) {
+  const t = useT();
   if (pages <= 1) return null;
   const items: (number | "…")[] = [];
   if (pages <= 7) {
@@ -242,7 +245,7 @@ function Pagination({ page, pages, onPage }: { page: number; pages: number; onPa
   }
   return (
     <div className="sh-pagination">
-      <button className="sh-pagebtn" disabled={page === 1} onClick={() => onPage(page - 1)}>← Previous</button>
+      <button className="sh-pagebtn" disabled={page === 1} onClick={() => onPage(page - 1)}>{t("history.prev")}</button>
       {items.map((it, i) =>
         it === "…"
           ? <span key={"e" + i} className="sh-pageellipsis">…</span>
@@ -252,7 +255,7 @@ function Pagination({ page, pages, onPage }: { page: number; pages: number; onPa
               onClick={() => onPage(it as number)}
             >{it}</button>
       )}
-      <button className="sh-pagebtn" disabled={page === pages} onClick={() => onPage(page + 1)}>Next →</button>
+      <button className="sh-pagebtn" disabled={page === pages} onClick={() => onPage(page + 1)}>{t("history.next")}</button>
     </div>
   );
 }
@@ -260,24 +263,26 @@ function Pagination({ page, pages, onPage }: { page: number; pages: number; onPa
 // ─── Empty states ─────────────────────────────────────────────────────────────
 
 function EmptyDefault({ onCta }: { onCta: () => void }) {
+  const t = useT();
   return (
     <div className="sh-empty">
       <div className="sh-empty-icon"><SearchX /></div>
-      <h3>No scan history yet</h3>
-      <p>Wallets you check will appear here. Labels and results are saved automatically.</p>
+      <h3>{t("history.no_history_title")}</h3>
+      <p>{t("history.no_history_sub")}</p>
       <button className="sh-cta" onClick={onCta}>
-        Run your first scan <ArrowRight />
+        {t("history.no_history_cta")} <ArrowRight />
       </button>
     </div>
   );
 }
 
 function EmptyFiltered({ chain }: { chain: string }) {
+  const t = useT();
   return (
     <div className="sh-empty filtered">
       <div className="sh-empty-icon"><FilterX /></div>
-      <h3>No {chain !== "All" ? chain : ""} scans found</h3>
-      <p>Try a different filter or run a new scan.</p>
+      <h3>{chain !== "All" ? t("history.no_filtered_chain", { chain }) : t("history.no_filtered_all")}</h3>
+      <p>{t("history.no_filtered_sub")}</p>
     </div>
   );
 }
@@ -285,6 +290,7 @@ function EmptyFiltered({ chain }: { chain: string }) {
 // ─── HistoryPage ──────────────────────────────────────────────────────────────
 
 export default function History() {
+  const t = useT();
   const [, navigate] = useLocation();
   const { getToken } = useAuth();
 
@@ -326,12 +332,12 @@ export default function History() {
       const data = await res.json() as { scans: ScanRow[] };
       setScans((data.scans ?? []).map(enrichScan));
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to load history";
+      const msg = err instanceof Error ? err.message : t("history.failed_load");
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [getToken]);
+  }, [getToken, t]);
 
   useEffect(() => { fetchScans(chain, sort); }, [chain, sort, fetchScans]);
 
@@ -412,12 +418,12 @@ export default function History() {
     <div className="container" style={{ paddingTop: 32, paddingBottom: 80 }}>
       <Reveal>
         <div className="sh-head">
-          <Eyebrow>History</Eyebrow>
+          <Eyebrow>{t("history.eyebrow")}</Eyebrow>
           <h1
             className="text-white font-extrabold tracking-tight"
             style={{ fontSize: 34, letterSpacing: "-0.03em", lineHeight: 1 }}
           >
-            Scan History
+            {t("history.title")}
           </h1>
         </div>
       </Reveal>
@@ -429,7 +435,7 @@ export default function History() {
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Search by label or address…"
+              placeholder={t("history.search_placeholder")}
             />
           </div>
           <div className="sh-chainfilter">
@@ -443,8 +449,8 @@ export default function History() {
           </div>
           <div className="sh-sort">
             <select value={sort} onChange={e => setSort(e.target.value)}>
-              {Object.keys(SORT_LABELS).map(k => (
-                <option key={k} value={k}>{SORT_LABELS[k]}</option>
+              {Object.keys(SORT_KEYS).map(k => (
+                <option key={k} value={k}>{t(SORT_KEYS[k])}</option>
               ))}
             </select>
           </div>
@@ -454,10 +460,10 @@ export default function History() {
       <Reveal delay={160}>
         <div className="sh-listhead">
           <span className="sh-count">
-            {loading ? "Loading…" : `${filtered.length} scan${filtered.length === 1 ? "" : "s"}`}
+            {loading ? `${t("common.loading")}…` : (filtered.length === 1 ? t("history.n_scan", { n: 1 }) : t("history.n_scans", { n: filtered.length }))}
           </span>
           <button className="sh-export" onClick={exportCSV} disabled={loading || !hasAny}>
-            <Download /> Export CSV
+            <Download /> {t("dash.export_csv")}
           </button>
         </div>
       </Reveal>
@@ -468,15 +474,15 @@ export default function History() {
             <div className="sh-empty-icon" style={{ animation: "sh-spin 1s linear infinite" }}>
               <RefreshCw />
             </div>
-            <p>Loading scan history…</p>
+            <p>{t("history.loading")}</p>
           </div>
         ) : error ? (
           <div className="sh-empty filtered">
             <div className="sh-empty-icon"><FilterX /></div>
-            <h3>Failed to load</h3>
+            <h3>{t("history.failed_load")}</h3>
             <p>{error}</p>
             <button className="sh-cta" onClick={() => fetchScans(chain, sort)}>
-              Retry <ArrowRight />
+              {t("history.retry")} <ArrowRight />
             </button>
           </div>
         ) : !hasAny ? (

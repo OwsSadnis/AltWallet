@@ -5,6 +5,7 @@ import { RefreshCw, Download, ShieldCheck, Clock, ArrowRight } from "lucide-reac
 import { ProtectedRoute } from "../components/aw/ProtectedRoute";
 import ChainLogo from "../components/aw/ChainLogo";
 import { Reveal } from "@/components/aw/motion";
+import { useT } from "@/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -29,12 +30,12 @@ function truncateMiddle(addr: string, head = 8, tail = 6): string {
   return `${addr.slice(0, head)}…${addr.slice(-tail)}`;
 }
 
-function relativeDay(iso: string): string {
+function relativeDay(iso: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const days = Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (days <= 0) return "Scanned today";
-  if (days === 1) return "Scanned 1 day ago";
-  if (days < 7) return `Scanned ${days} days ago`;
-  return "Scanned " + new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (days <= 0) return t("flagged.scanned_today");
+  if (days === 1) return t("flagged.scanned_one_day");
+  if (days < 7) return t("flagged.scanned_n_days", { n: days });
+  return t("flagged.scanned_date", { date: new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }) });
 }
 
 function chainDisplayName(chain: string): string {
@@ -51,6 +52,7 @@ interface FlaggedCardProps {
 }
 
 function FlaggedCard({ wallet, rescanning, onRescan, onViewDetail }: FlaggedCardProps) {
+  const t = useT();
   return (
     <div className={`fl-card${rescanning ? " is-rescanning" : ""}`}>
       <div className="fl-card-left">
@@ -62,7 +64,7 @@ function FlaggedCard({ wallet, rescanning, onRescan, onViewDetail }: FlaggedCard
         {wallet.label && <div className="fl-label">{wallet.label}</div>}
         <div className="fl-date">
           <Clock style={{ width: 12, height: 12, strokeWidth: 1.75 }} />
-          {relativeDay(wallet.scannedAt)}
+          {relativeDay(wallet.scannedAt, t)}
         </div>
       </div>
 
@@ -73,7 +75,7 @@ function FlaggedCard({ wallet, rescanning, onRescan, onViewDetail }: FlaggedCard
         </div>
         <span className="fl-chip-high">
           <span className="aw-dot-sm" />
-          High
+          {t("flagged.chip_high")}
         </span>
         <div className="fl-card-btns">
           <button
@@ -82,13 +84,13 @@ function FlaggedCard({ wallet, rescanning, onRescan, onViewDetail }: FlaggedCard
             onClick={() => onRescan(wallet)}
           >
             {rescanning ? (
-              <><span className="fl-rescan-spinner" />Rescanning</>
+              <><span className="fl-rescan-spinner" />{t("flagged.rescanning")}</>
             ) : (
-              <><RefreshCw style={{ width: 13, height: 13, strokeWidth: 1.85 }} />Rescan</>
+              <><RefreshCw style={{ width: 13, height: 13, strokeWidth: 1.85 }} />{t("common.rescan")}</>
             )}
           </button>
           <button className="fl-btn fl-btn-accent" onClick={() => onViewDetail(wallet)}>
-            View detail
+            {t("flagged.view_detail")}
             <ArrowRight style={{ width: 13, height: 13, strokeWidth: 1.85 }} />
           </button>
         </div>
@@ -126,14 +128,15 @@ function SkeletonCard() {
 // ── EmptyState ────────────────────────────────────────────────────────────────
 
 function EmptyState() {
+  const t = useT();
   return (
     <div className="fl-empty">
       <div className="fl-empty-art">
         <ShieldCheck style={{ width: 30, height: 30, strokeWidth: 1.5 }} />
       </div>
-      <div className="fl-empty-title">No high risk wallets found</div>
+      <div className="fl-empty-title">{t("flagged.empty_title")}</div>
       <div className="fl-empty-sub">
-        Wallets with score 0–39 will appear here after you scan them.
+        {t("flagged.empty_sub")}
       </div>
     </div>
   );
@@ -142,6 +145,7 @@ function EmptyState() {
 // ── FlaggedInner ──────────────────────────────────────────────────────────────
 
 function FlaggedInner() {
+  const t = useT();
   const [, setLocation] = useLocation();
   const { getToken } = useAuth();
   const [wallets, setWallets] = useState<FlaggedWallet[]>([]);
@@ -213,16 +217,16 @@ function FlaggedInner() {
         <header className="fl-header">
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <h1 className="fl-title" style={{ fontSize: 32 }}>High risk wallets</h1>
+              <h1 className="fl-title" style={{ fontSize: 32 }}>{t("flagged.list_title")}</h1>
               {!isLoading && wallets.length > 0 && (
                 <span className="fl-count-pill">
                   <span className="aw-dot-sm" />
-                  {wallets.length} flagged
+                  {t("flagged.count_pill", { n: wallets.length })}
                 </span>
               )}
             </div>
             <p className="fl-subtitle">
-              Wallets flagged from your scan history with HIGH risk score (0–39).
+              {t("flagged.list_sub")}
             </p>
           </div>
           <div className="fl-header-actions">
@@ -232,9 +236,9 @@ function FlaggedInner() {
               onClick={handleExport}
             >
               {isExporting ? (
-                <><span className="fl-export-spinner" />Exporting</>
+                <><span className="fl-export-spinner" />{t("flagged.exporting")}</>
               ) : (
-                <><Download style={{ width: 13, height: 13, strokeWidth: 1.85 }} />Export CSV</>
+                <><Download style={{ width: 13, height: 13, strokeWidth: 1.85 }} />{t("dash.export_csv")}</>
               )}
             </button>
           </div>
