@@ -161,11 +161,11 @@ export default function Dashboard() {
             value={
               statsLoading
                 ? "—"
-                : `${stats?.scans_today ?? 0} / ${stats?.daily_limit ?? 3}`
+                : `${stats?.scans_today ?? 0} / ${stats?.daily_limit ?? (plan === "pro" ? 50 : plan === "business" ? 200 : 3)}`
             }
             delta={`${Math.max(
               0,
-              (stats?.daily_limit ?? 3) - (stats?.scans_today ?? 0)
+              (stats?.daily_limit ?? (plan === "pro" ? 50 : plan === "business" ? 200 : 3)) - (stats?.scans_today ?? 0)
             )} remaining`}
             deltaTone="green"
           />
@@ -572,7 +572,7 @@ function PlanCard({
           "AI-generated summary",
           "CSV export",
         ]
-      : ["3 scans / day", "ETH & BTC only", "Basic risk analysis"];
+      : ["3 scans / day", "ETH, BTC, SOL, TRX, XRP, SUI", "Basic risk analysis"];
 
   return (
     <Card style={{ borderColor: "rgba(29,158,117,0.35)" }}>
