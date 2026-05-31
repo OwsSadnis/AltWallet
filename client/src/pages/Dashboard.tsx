@@ -74,8 +74,8 @@ export default function Dashboard() {
             <Eyebrow>{t("dash.eyebrow")}</Eyebrow>
             <div className="flex items-center gap-3.5 mt-2.5">
               <h1
-                className="text-white font-extrabold tracking-tight"
-                style={{ fontSize: 34, letterSpacing: "-0.03em", lineHeight: 1 }}
+                className="aw-gradient-text font-extrabold tracking-tight"
+                style={{ fontSize: 34, letterSpacing: "-0.04em", lineHeight: 1 }}
               >
                 {t("dash.welcome", { firstName })}
               </h1>

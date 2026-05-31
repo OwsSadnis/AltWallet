@@ -1027,9 +1027,9 @@ body {
   font-style: italic;
 }
 
-/* Gradient text helper */
+/* Gradient text helper — matches .aw-hero-title gradient */
 .aw-gradient-text {
-  background: linear-gradient(180deg, #FFFFFF 0%, #666666 130%);
+  background: linear-gradient(180deg, #FFFFFF 0%, #8A8A8A 130%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -2248,8 +2248,8 @@ html[dir="rtl"] .aw-drawer-link:hover { padding-left: 4px; padding-right: 10px; 
   border-bottom: 1px solid var(--border-subtle);
   margin-bottom: 24px;
 }
-.fl-title { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: var(--fg-primary); line-height: 1.1; }
-.fl-subtitle { font-size: 14px; color: var(--fg-secondary); margin-top: 6px; max-width: 560px; }
+.fl-title { font-size: 24px; font-weight: 800; letter-spacing: -0.04em; color: var(--fg-primary); line-height: 1.1; }
+.fl-subtitle { font-size: 17px; color: var(--fg-secondary); line-height: 1.55; margin-top: 8px; max-width: 560px; }
 .fl-header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .fl-count-pill {
   display: inline-flex; align-items: center; gap: 6px;

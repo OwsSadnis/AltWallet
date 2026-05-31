@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@clerk/clerk-react";
 import { RefreshCw, Download, ShieldCheck, Clock, ArrowRight } from "lucide-react";
 import { ProtectedRoute } from "../components/aw/ProtectedRoute";
+import { Eyebrow } from "@/components/aw/Primitives";
 import ChainLogo from "../components/aw/ChainLogo";
 import { Reveal } from "@/components/aw/motion";
 import { useT } from "@/i18n";
@@ -216,8 +217,9 @@ function FlaggedInner() {
       <Reveal>
         <header className="fl-header">
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <h1 className="fl-title" style={{ fontSize: 32 }}>{t("flagged.list_title")}</h1>
+            <Eyebrow>{t("flagged.eyebrow")}</Eyebrow>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10 }}>
+              <h1 className="fl-title aw-gradient-text" style={{ fontSize: 32 }}>{t("flagged.list_title")}</h1>
               {!isLoading && wallets.length > 0 && (
                 <span className="fl-count-pill">
                   <span className="aw-dot-sm" />
