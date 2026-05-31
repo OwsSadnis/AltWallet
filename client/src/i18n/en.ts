@@ -10,6 +10,8 @@ export const en: Record<string, string> = {
   "nav.close_menu": "Close menu",
   "nav.language": "Language",
   "nav.history": "History",
+  "nav.flagged": "Flagged",
+  "nav.admin": "Admin",
 
   // Common
   "common.try": "Try",

@@ -23,7 +23,7 @@ export function Navbar() {
   const LINKS = [
     { label: t("nav.checker"), href: "/checker" },
     { label: t("nav.history"), href: "/history" },
-    { label: "Flagged", href: "/flagged", signedIn: true },
+    { label: t("nav.flagged"), href: "/flagged", signedIn: true },
     { label: t("nav.pricing"), href: "/pricing" },
     { label: t("nav.redeem"), href: "/redeem" },
   ];
@@ -79,7 +79,7 @@ export function Navbar() {
                   href="/dashboard"
                   className={cn("aw-nav-link", isActive("/dashboard") && "active")}
                 >
-                  Dashboard
+                  {t("nav.dashboard")}
                 </Link>
               )}
               {LINKS.map((l) =>
@@ -98,7 +98,7 @@ export function Navbar() {
                   href="/admin"
                   className={cn("aw-nav-link", isActive("/admin") && "active")}
                 >
-                  Admin
+                  {t("nav.admin")}
                 </Link>
               )}
             </div>
@@ -193,7 +193,7 @@ export function Navbar() {
                   className={cn("aw-drawer-link", isActive("/dashboard") && "text-white")}
                   onClick={() => setDrawerOpen(false)}
                 >
-                  Dashboard
+                  {t("nav.dashboard")}
                   <ArrowRight className="w-4 h-4 opacity-50" />
                 </Link>
               )}
@@ -219,7 +219,7 @@ export function Navbar() {
                   className={cn("aw-drawer-link", isActive("/admin") && "text-white")}
                   onClick={() => setDrawerOpen(false)}
                 >
-                  Admin
+                  {t("nav.admin")}
                   <ArrowRight className="w-4 h-4 opacity-50" />
                 </Link>
               )}

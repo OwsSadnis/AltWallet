@@ -8,6 +8,8 @@ export const zh: Record<string, string> = {
   "nav.close_menu": "关闭菜单",
   "nav.language": "语言",
   "nav.history": "记录",
+  "nav.flagged": "标记",
+  "nav.admin": "管理",
 
   "common.try": "试试",
   "common.beta": "测试版",

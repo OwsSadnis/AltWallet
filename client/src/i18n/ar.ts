@@ -8,6 +8,8 @@ export const ar: Record<string, string> = {
   "nav.close_menu": "إغلاق القائمة",
   "nav.language": "اللغة",
   "nav.history": "السجل",
+  "nav.flagged": "المُعلَّمة",
+  "nav.admin": "الإدارة",
 
   "common.try": "جرّب",
   "common.beta": "تجريبي",

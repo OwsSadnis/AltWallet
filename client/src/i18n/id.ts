@@ -8,6 +8,8 @@ export const id: Record<string, string> = {
   "nav.close_menu": "Tutup menu",
   "nav.language": "Bahasa",
   "nav.history": "Riwayat",
+  "nav.flagged": "Ditandai",
+  "nav.admin": "Admin",
 
   "common.try": "Coba",
   "common.beta": "Beta",
