@@ -218,7 +218,7 @@ export default function Checker() {
   const isPro = userPlan === "pro" || userPlan === "business";
 
   return (
-    <div className="container aw-scan">
+    <div className="container aw-scan aw-page-bg">
       {stage === "entry" && (
         <EntryView
           onMultiScan={startMultiScan}

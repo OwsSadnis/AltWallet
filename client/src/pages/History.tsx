@@ -415,7 +415,7 @@ export default function History() {
   const hasAny = scans.length > 0;
 
   return (
-    <div className="container" style={{ paddingTop: 32, paddingBottom: 80 }}>
+    <div className="container aw-page-bg" style={{ paddingTop: 32, paddingBottom: 80 }}>
       <Reveal>
         <div className="sh-head">
           <Eyebrow>{t("history.eyebrow")}</Eyebrow>

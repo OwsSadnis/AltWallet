@@ -66,7 +66,7 @@ export default function Dashboard() {
   const scanInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="container" style={{ paddingTop: 48, paddingBottom: 120 }}>
+    <div className="container aw-page-bg" style={{ paddingTop: 48, paddingBottom: 120 }}>
       {/* Header */}
       <Reveal delay={0}>
         <div className="flex items-start justify-between gap-6 mb-8 flex-wrap">

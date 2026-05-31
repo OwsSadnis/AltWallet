@@ -2559,3 +2559,13 @@ html[dir="rtl"] .aw-drawer-link:hover { padding-left: 4px; padding-right: 10px; 
   .aw-wallet-tab { min-width: 100px; padding: 8px 11px; }
   .aw-wallet-tab-label { font-size: 12px; }
 }
+
+/* Desktop ambient green glow — mirrors the body gradient but scoped to the
+   page container so it appears over centered content on wide viewports. */
+@media (min-width: 1024px) {
+  .aw-page-bg {
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(29, 158, 117, 0.06), transparent 60%),
+      radial-gradient(900px 500px at 90% 10%, rgba(29, 158, 117, 0.04), transparent 55%);
+  }
+}

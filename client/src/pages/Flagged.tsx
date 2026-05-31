@@ -213,7 +213,7 @@ function FlaggedInner() {
   }
 
   return (
-    <div className="container" style={{ paddingTop: 32, paddingBottom: 80 }}>
+    <div className="container aw-page-bg" style={{ paddingTop: 32, paddingBottom: 80 }}>
       <Reveal>
         <header className="fl-header">
           <div>
