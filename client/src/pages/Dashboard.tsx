@@ -75,7 +75,15 @@ export default function Dashboard() {
             <div className="flex items-center gap-3.5 mt-2.5">
               <h1
                 className="aw-gradient-text font-extrabold tracking-tight"
-                style={{ fontSize: 34, letterSpacing: "-0.04em", lineHeight: 1 }}
+                style={{
+                  fontSize: 34,
+                  letterSpacing: "-0.04em",
+                  lineHeight: 1,
+                  background: "linear-gradient(180deg, #FFFFFF 0%, #AAAAAA 130%)",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
               >
                 {t("dash.welcome", { firstName })}
               </h1>
@@ -143,20 +151,13 @@ export default function Dashboard() {
             value={statsLoading ? "—" : String(stats?.total_scans ?? 0)}
             delta={t("dash.stat_this_week", { n: 18 })}
             deltaTone="green"
-            accent
           />
           <StatCard
             label={t("dash.stat_flagged_wallets")}
             value={statsLoading ? "—" : String(stats?.flagged_count ?? 0)}
             delta={t("dash.stat_since_last", { n: 3 })}
             deltaTone="red"
-            danger
-          />
-          <StatCard
-            label={t("dash.stat_chains_used")}
-            value={statsLoading ? "—" : String(stats?.chains_used.length ?? 0)}
-            delta={stats?.chains_used.join(" · ") ?? ""}
-            deltaTone="muted"
+            valueColor="#E05555"
           />
           <StatCard
             label={t("dash.stat_scans_today")}
@@ -167,6 +168,13 @@ export default function Dashboard() {
             }
             delta={t("dash.stat_remaining", { n: Math.max(0, (stats?.daily_limit ?? (plan === "pro" ? 50 : plan === "business" ? 200 : 3)) - (stats?.scans_today ?? 0)) })}
             deltaTone="green"
+            valueColor="rgba(29,158,117,0.8)"
+          />
+          <StatCard
+            label={t("dash.stat_chains_used")}
+            value={statsLoading ? "—" : String(stats?.chains_used.length ?? 0)}
+            delta={stats?.chains_used.join(" · ") ?? ""}
+            deltaTone="muted"
           />
         </div>
       </Reveal>
@@ -221,8 +229,8 @@ function StatCard({
   value,
   delta,
   deltaTone,
-  accent,
   danger,
+  valueColor,
 }: {
   label: string;
   value: string;
@@ -230,6 +238,7 @@ function StatCard({
   deltaTone?: "green" | "red" | "muted";
   accent?: boolean;
   danger?: boolean;
+  valueColor?: string;
 }) {
   return (
     <Card>
@@ -246,7 +255,7 @@ function StatCard({
           letterSpacing: "-0.03em",
           fontVariantNumeric: "tabular-nums",
           marginBottom: 10,
-          color: danger ? "#E5484D" : accent ? "var(--accent)" : "white",
+          color: valueColor ?? (danger ? "#E05555" : "#E8E8E8"),
         }}
       >
         {value}

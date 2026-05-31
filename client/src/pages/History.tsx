@@ -420,8 +420,8 @@ export default function History() {
         <div className="sh-head">
           <Eyebrow>{t("history.eyebrow")}</Eyebrow>
           <h1
-            className="aw-gradient-text font-extrabold tracking-tight"
-            style={{ fontSize: 34, letterSpacing: "-0.04em", lineHeight: 1 }}
+            className="aw-gradient-text tracking-tight"
+            style={{ fontSize: 34, letterSpacing: "-0.04em", lineHeight: 1, fontWeight: 900 }}
           >
             {t("history.title")}
           </h1>
