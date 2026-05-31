@@ -43,11 +43,7 @@ function Router() {
             <History />
           </ProtectedRoute>
         </Route>
-        <Route path="/flagged">
-          <ProtectedRoute>
-            <Flagged />
-          </ProtectedRoute>
-        </Route>
+        <Route path="/flagged" component={Flagged} />
         <Route path="/admin">
           <ProtectedRoute>
             <Admin />

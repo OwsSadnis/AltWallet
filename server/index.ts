@@ -21,6 +21,7 @@ import { adminRouter } from "./routes/admin.js";
 import { announcementsRouter } from "./routes/announcements.js";
 import dashboardRouter from "./routes/dashboardRoutes.js";
 import historyRouter from "./routes/history.js";
+import flaggedRouter from "./routes/flagged.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -150,6 +151,7 @@ app.use("/api/admin", adminRouter);
 app.use("/api/announcements", announcementsRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/history", historyRouter);
+app.use("/api/flagged", flaggedRouter);
 
 // Health check — no auth needed
 app.get("/api/health", (_req, res) => {

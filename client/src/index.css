@@ -2225,3 +2225,180 @@ html[dir="rtl"] .aw-drawer-link:hover { padding-left: 4px; padding-right: 10px; 
   .sh-chainfilter { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; scrollbar-width: none; }
   .sh-chainfilter::-webkit-scrollbar { display: none; }
 }
+
+/* === Flagged Page === */
+:root {
+  --risk-critical-bg: rgba(229, 72, 77, 0.12);
+  --r-lg: 12px;
+  --bg-overlay: #141414;
+  --accent-press: #17825f;
+}
+
+/* ==========================================================
+   Flagged — High Risk Wallets page
+   ========================================================== */
+
+/* ---- Page header ---- */
+.fl-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 24px;
+}
+.fl-title { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: var(--fg-primary); line-height: 1.1; }
+.fl-subtitle { font-size: 14px; color: var(--fg-secondary); margin-top: 6px; max-width: 560px; }
+.fl-header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.fl-count-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 24px; padding: 0 10px; border-radius: 999px;
+  background: var(--risk-critical-bg); border: 1px solid rgba(229,72,77,0.30);
+  color: var(--risk-high); font-size: 12px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.fl-count-pill .aw-dot-sm { width: 6px; height: 6px; border-radius: 50%; background: var(--risk-high); }
+
+/* ---- Sidebar flagged count ---- */
+.aw-nav-count {
+  margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; background: var(--risk-critical-bg);
+  border: 1px solid rgba(229,72,77,0.30);
+  color: var(--risk-high); font-size: 11px; font-weight: 600;
+  font-variant-numeric: tabular-nums; font-family: var(--font-mono);
+}
+.aw-nav-item.active .aw-nav-count { color: var(--risk-high); }
+
+/* ---- Chain logo chip ---- */
+.aw-chainlogo {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 7px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-default);
+  color: var(--fg-secondary);
+  flex-shrink: 0;
+}
+
+/* ---- Cards list ---- */
+.fl-list { display: flex; flex-direction: column; gap: 12px; }
+
+.fl-card {
+  display: flex; align-items: stretch; justify-content: space-between;
+  gap: 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.fl-card:hover { background: var(--bg-raised); }
+
+/* left */
+.fl-card-left { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fl-chain-row { display: flex; align-items: center; gap: 10px; }
+.fl-chain-name {
+  font-family: var(--font-mono); font-size: 14px; color: var(--fg-secondary);
+  letter-spacing: -0.01em;
+}
+.fl-addr {
+  font-family: var(--font-mono); font-size: 13px; color: var(--fg-tertiary);
+  letter-spacing: -0.01em; margin-top: 2px;
+}
+.fl-label { font-size: 12px; color: var(--fg-secondary); font-style: italic; }
+.fl-date { font-size: 12px; color: var(--fg-tertiary); display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.fl-date i { width: 12px; height: 12px; stroke-width: 1.75; }
+
+/* right */
+.fl-card-right { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 10px; flex-shrink: 0; }
+.fl-score-row { display: flex; align-items: baseline; gap: 4px; }
+.fl-score {
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: 40px; font-weight: 700; line-height: 1;
+  color: var(--risk-high); letter-spacing: -0.03em;
+}
+.fl-score-denom { font-family: var(--font-mono); font-size: 14px; color: var(--fg-tertiary); }
+
+.fl-chip-high {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px; border-radius: 999px;
+  background: rgba(229,72,77,0.15); border: 1px solid rgba(229,72,77,0.30);
+  color: var(--risk-high); font-weight: 600; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.08em; line-height: 1;
+}
+.fl-chip-high .aw-dot-sm { width: 6px; height: 6px; border-radius: 50%; background: var(--risk-high); }
+
+.fl-card-btns { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.fl-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 30px; padding: 0 14px; border-radius: 999px;
+  font-family: var(--font-sans); font-size: 12px; font-weight: 500; letter-spacing: -0.01em;
+  border: 1px solid transparent; cursor: pointer; white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.fl-btn:active { transform: scale(0.98); }
+.fl-btn i { width: 13px; height: 13px; stroke-width: 1.85; }
+.fl-btn-outline { background: transparent; color: var(--fg-primary); border-color: var(--border-strong); }
+.fl-btn-outline:hover { background: var(--bg-overlay); border-color: var(--fg-tertiary); }
+.fl-btn-accent { background: var(--accent); color: #fff; }
+.fl-btn-accent:hover { background: var(--accent-hover); }
+.fl-btn-accent:active { background: var(--accent-press); }
+.fl-btn[disabled] { opacity: 0.55; cursor: default; pointer-events: none; }
+
+/* rescanning state */
+.fl-card.is-rescanning { border-color: var(--border-strong); }
+.fl-card.is-rescanning .fl-score { color: var(--fg-tertiary); }
+.fl-rescan-spinner { width: 13px; height: 13px; border: 1.5px solid rgba(255,255,255,0.25); border-top-color: currentColor; border-radius: 50%; animation: fl-spin 0.7s linear infinite; }
+@keyframes fl-spin { to { transform: rotate(360deg); } }
+
+/* ---- Export button spinner ---- */
+.fl-export-spinner { width: 13px; height: 13px; border: 1.5px solid var(--border-strong); border-top-color: var(--fg-secondary); border-radius: 50%; animation: fl-spin 0.7s linear infinite; }
+
+/* ---- Empty state ---- */
+.fl-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 88px 24px;
+  border: 1px solid var(--border-subtle); border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+}
+.fl-empty-art {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: var(--bg-raised); border: 1px solid var(--border-default);
+  display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
+  color: var(--accent);
+}
+.fl-empty-art i { width: 30px; height: 30px; stroke-width: 1.5; }
+.fl-empty-title { font-size: 16px; font-weight: 600; color: var(--fg-primary); }
+.fl-empty-sub { font-size: 13px; color: var(--fg-tertiary); margin-top: 6px; max-width: 320px; }
+
+/* ---- Skeleton ---- */
+.fl-skel { pointer-events: none; }
+.fl-skel-line { background: var(--bg-raised); border-radius: 6px; position: relative; overflow: hidden; }
+.fl-skel-line::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.045), transparent);
+  animation: fl-pulse 1.3s ease-in-out infinite;
+}
+@keyframes fl-pulse { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+/* ---- Toast ---- */
+.fl-toast-wrap { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.fl-toast {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-overlay); border: 1px solid var(--border-strong);
+  border-radius: 10px; padding: 10px 14px; color: var(--fg-primary); font-size: 13px;
+  animation: fl-toast-in var(--dur-med) var(--ease-out);
+}
+.fl-toast i { width: 15px; height: 15px; stroke-width: 1.85; color: var(--accent); }
+.fl-toast .fl-toast-mono { font-family: var(--font-mono); color: var(--fg-secondary); font-size: 12px; }
+@keyframes fl-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ---- Responsive: stack score below on narrow widths ---- */
+@media (max-width: 720px) {
+  .aw-main { padding: 24px 20px 48px; }
+  .fl-header { flex-direction: column; gap: 16px; }
+  .fl-card { flex-direction: column; gap: 18px; }
+  .fl-card-right { align-items: flex-start; }
+  .fl-card-btns { justify-content: flex-start; }
+}
