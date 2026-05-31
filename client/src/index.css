@@ -2402,3 +2402,160 @@ html[dir="rtl"] .aw-drawer-link:hover { padding-left: 4px; padding-right: 10px; 
   .fl-card-right { align-items: flex-start; }
   .fl-card-btns { justify-content: flex-start; }
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   MULTI-WALLET — extra slots, add-wallet button, wallet tabs
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* Extra wallet slot row */
+.aw-extra-slot {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  height: 48px;
+  overflow: visible;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+.aw-extra-slot:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ghost);
+}
+.aw-extra-slot-chain {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 12px 0 0 12px;
+  color: var(--fg-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--dur-fast);
+}
+.aw-extra-slot-chain:hover { background: rgba(255, 255, 255, 0.04); }
+.aw-extra-slot-remove {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  border-radius: 7px;
+  background: transparent;
+  border: none;
+  color: var(--fg-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.aw-extra-slot-remove:hover {
+  background: rgba(229, 72, 77, 0.1);
+  color: var(--risk-high);
+}
+
+/* Add Wallet button */
+.aw-add-wallet-wrap { margin-top: 10px; }
+.aw-add-wallet-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  color: var(--fg-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), border-style var(--dur-fast);
+}
+.aw-add-wallet-btn:hover:not(:disabled) {
+  background: var(--bg-raised);
+  color: var(--fg-primary);
+  border-color: var(--fg-tertiary);
+  border-style: solid;
+}
+.aw-add-wallet-btn-locked { opacity: 0.5; cursor: not-allowed; }
+.aw-add-wallet-lock-wrap { position: relative; display: inline-flex; }
+.aw-lock-tooltip {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  color: var(--fg-secondary);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast);
+  z-index: 10;
+}
+.aw-add-wallet-lock-wrap:hover .aw-lock-tooltip { opacity: 1; }
+
+/* Wallet tabs */
+.aw-wallet-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.aw-wallet-tab {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  cursor: pointer;
+  min-width: 120px;
+  transition: background var(--dur-fast), border-color var(--dur-fast);
+}
+.aw-wallet-tab:hover {
+  background: var(--bg-raised);
+  border-color: var(--border-strong);
+}
+.aw-wallet-tab.active {
+  background: var(--bg-raised);
+  border-color: var(--border-strong);
+}
+.aw-wallet-tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.aw-wallet-tab-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  min-width: 0;
+}
+.aw-wallet-tab-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-primary);
+  line-height: 1;
+}
+.aw-wallet-tab-addr {
+  font-size: 11px;
+  color: var(--fg-tertiary);
+  line-height: 1;
+  font-family: var(--font-mono);
+}
+@media (max-width: 640px) {
+  .aw-wallet-tabs { gap: 5px; }
+  .aw-wallet-tab { min-width: 100px; padding: 8px 11px; }
+  .aw-wallet-tab-label { font-size: 12px; }
+}

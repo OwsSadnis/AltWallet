@@ -2,15 +2,18 @@
 //  1) Entry (hero with address bar)
 //  2) Scanning (pulse-ring loader + sequential status steps)
 //  3) Results (staggered reveal of ScoreCard, VitalsCard, Flags, Tx, AI summary)
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import {
   ChainCode,
   EXAMPLE_ADDRESSES,
   CHAINS,
+  CHAIN_MAP,
   ScanResult,
   generateScan,
+  riskFromScore,
 } from "@/lib/constants";
 import { WalletInputBar, ChainLogo } from "@/components/aw/WalletInputBar";
 import { Button, Chip, Eyebrow } from "@/components/aw/Primitives";
@@ -24,11 +27,22 @@ import {
   DownloadBar,
   EducationBanner,
 } from "@/components/aw/ResultCards";
-import { ShieldCheck, RotateCw, Check, Loader2, Info } from "lucide-react";
+import {
+  ShieldCheck,
+  RotateCw,
+  Check,
+  Loader2,
+  Info,
+  Plus,
+  X,
+  ChevronDown,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
 import { useI18n } from "@/i18n";
 
 type Stage = "entry" | "scanning" | "results";
+type WalletSlot = { address: string; chain: ChainCode };
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
 interface ScanApiResponse extends ScanResult {
@@ -64,8 +78,10 @@ export default function Checker() {
   const { lang } = useI18n();
 
   const [stage, setStage] = useState<Stage>("entry");
-  const [scan, setScan] = useState<ScanResult | null>(null);
-  const [scanId, setScanId] = useState<string | null>(null);
+  const [scans, setScans] = useState<ScanResult[]>([]);
+  const [scanIds, setScanIds] = useState<(string | null)[]>([]);
+  const [activeTab, setActiveTab] = useState(0);
+  const [lastSlots, setLastSlots] = useState<WalletSlot[]>([]);
   const [userPlan, setUserPlan] = useState<string>("free");
   const [scanError, setScanError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -87,29 +103,35 @@ export default function Checker() {
 
   useEffect(() => {
     if (initial?.address) {
-      startScan(initial.address, initial.chain);
+      startMultiScan([{ address: initial.address, chain: initial.chain }]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial?.address]);
 
-  const startScan = (address: string, chain: ChainCode) => {
+  const startMultiScan = (slots: WalletSlot[]) => {
+    const validSlots = slots.filter((s) => s.address.trim());
+    if (!validSlots.length) return;
+
+    setLastSlots(validSlots);
     setStage("scanning");
     setProgress(0);
     setStepIdx(0);
     setScanError(null);
-    setScan(null);
-    setScanId(null);
+    setScans([]);
+    setScanIds([]);
+    setActiveTab(0);
 
-    // Animation: 3s (real API usually finishes in 2–5s)
     const ANIM_DURATION = 3000;
     const tStart = performance.now();
     let raf: number;
     let animDone = false;
-    let apiResult: ScanResult | null = null;
+    let apiResults: (ScanResult | null)[] = [];
+    let newScanIds: (string | null)[] = [];
     let apiError: string | null = null;
+    let apiDone = false;
 
     const step = (t: number) => {
-      const p = Math.min(0.95, (t - tStart) / ANIM_DURATION); // cap at 95% until API returns
+      const p = Math.min(0.95, (t - tStart) / ANIM_DURATION);
       setProgress(p);
       if (p > 0.25) setStepIdx((s) => Math.max(s, 1));
       if (p > 0.5) setStepIdx((s) => Math.max(s, 2));
@@ -118,18 +140,24 @@ export default function Checker() {
         raf = requestAnimationFrame(step);
       } else {
         animDone = true;
-        if (apiResult) finish(apiResult, null);
-        else if (apiError) finish(null, apiError);
+        if (apiDone) finish(apiResults, newScanIds, apiError);
       }
     };
     raf = requestAnimationFrame(step);
 
-    const finish = (result: ScanResult | null, error: string | null) => {
+    const finish = (
+      results: (ScanResult | null)[],
+      ids: (string | null)[],
+      error: string | null
+    ) => {
       cancelAnimationFrame(raf);
       setProgress(1);
       setStepIdx(3);
-      if (result) {
-        setScan(result);
+      const pairs = results.map((r, i) => ({ result: r, id: ids[i] ?? null }));
+      const valid = pairs.filter((p) => p.result !== null);
+      if (valid.length) {
+        setScans(valid.map((p) => p.result as ScanResult));
+        setScanIds(valid.map((p) => p.id));
         setStage("results");
       } else {
         setScanError(error ?? "Scan failed.");
@@ -137,37 +165,50 @@ export default function Checker() {
       }
     };
 
-    // API call (signed-in users) or mock (demo mode)
-    if (isSignedIn) {
-      callScanApi(address, chain, lang, getToken)
-        .then((data) => {
-          if (data.error) {
-            apiError = data.error;
-          } else {
-            apiResult = data as ScanResult;
-            if (data.scanId) setScanId(data.scanId);
-            if (data.plan) setUserPlan(data.plan);
+    const scanAll = async () => {
+      try {
+        if (isSignedIn) {
+          const responses = await Promise.all(
+            validSlots.map((s) =>
+              callScanApi(s.address, s.chain, lang, getToken).catch((err) => {
+                console.warn("[checker] API call failed, using mock data:", err);
+                return generateScan(s.address, s.chain) as ScanApiResponse;
+              })
+            )
+          );
+          for (const data of responses) {
+            if (data.error) {
+              apiError = data.error;
+              apiResults.push(null);
+            } else {
+              apiResults.push(data as ScanResult);
+            }
+            newScanIds.push((data as ScanApiResponse).scanId ?? null);
+            if ((data as ScanApiResponse).plan) {
+              setUserPlan((data as ScanApiResponse).plan!);
+            }
           }
-          if (animDone) finish(apiResult, apiError);
-        })
-        .catch((err) => {
-          console.warn("[checker] API call failed, using mock data:", err);
-          apiResult = generateScan(address, chain);
-          if (animDone) finish(apiResult, null);
-        });
-    } else {
-      // Demo mode — mock data for unauthenticated visitors
-      setTimeout(() => {
-        apiResult = generateScan(address, chain);
-        if (animDone) finish(apiResult, null);
-      }, 1200);
-    }
+        } else {
+          // Demo mode — mock data for unauthenticated visitors
+          await new Promise((r) => setTimeout(r, 1200));
+          apiResults = validSlots.map((s) => generateScan(s.address, s.chain));
+          newScanIds = validSlots.map(() => null);
+        }
+      } catch {
+        apiError = "Scan failed.";
+      }
+      apiDone = true;
+      if (animDone) finish(apiResults, newScanIds, apiError);
+    };
+    scanAll();
   };
 
   const reset = () => {
     setStage("entry");
-    setScan(null);
-    setScanId(null);
+    setScans([]);
+    setScanIds([]);
+    setActiveTab(0);
+    setLastSlots([]);
     setScanError(null);
     setProgress(0);
     setStepIdx(0);
@@ -179,37 +220,281 @@ export default function Checker() {
   return (
     <div className="container aw-scan">
       {stage === "entry" && (
-        <EntryView onScan={startScan} errorMsg={scanError} />
+        <EntryView
+          onMultiScan={startMultiScan}
+          errorMsg={scanError}
+          isPro={isPro}
+        />
       )}
       {stage === "scanning" && (
         <ScanningView
-          address={initial?.address || ""}
+          address={lastSlots[0]?.address || ""}
+          walletCount={lastSlots.length}
           progress={progress}
           stepIdx={stepIdx}
         />
       )}
-      {stage === "results" && scan && (
-        <ResultsView
-          scan={scan}
-          scanId={scanId}
-          isPro={isPro}
-          onReset={reset}
-          onRescan={() => startScan(scan.address, scan.chain)}
-        />
+      {stage === "results" && scans.length > 0 && (
+        <>
+          <WalletTabs
+            scans={scans}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
+          <ResultsView
+            scan={scans[activeTab]}
+            scanId={scanIds[activeTab] ?? null}
+            isPro={isPro}
+            onReset={reset}
+            onRescan={() => startMultiScan(lastSlots)}
+          />
+        </>
       )}
+    </div>
+  );
+}
+
+// ─── Extra slot row (additional wallets beyond the first) ─────────────────────
+function ExtraSlotRow({
+  slot,
+  onChange,
+  onRemove,
+}: {
+  slot: WalletSlot;
+  onChange: (s: WalletSlot) => void;
+  onRemove: () => void;
+}) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleScroll = () => setOpen(false);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, [open]);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (
+        !triggerRef.current?.contains(e.target as Node) &&
+        !dropdownRef.current?.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  const detectChain = (val: string): ChainCode | null => {
+    const v = val.trim();
+    if (!v) return null;
+    if (v.startsWith("T") && v.length === 34) return "TRX";
+    if (v.startsWith("1") || v.startsWith("3") || v.startsWith("bc1")) return "BTC";
+    if (v.startsWith("r") && v.length >= 25 && v.length <= 35) return "XRP";
+    if (v.length === 66 && v.startsWith("0x")) return "SUI";
+    if (
+      v.length >= 32 &&
+      v.length <= 44 &&
+      !v.startsWith("0x") &&
+      /^[1-9A-HJ-NP-Za-km-z]+$/.test(v)
+    )
+      return "SOL";
+    if (v.startsWith("0x") && v.length === 42) return "ETH";
+    return null;
+  };
+
+  const info = CHAIN_MAP[slot.chain];
+
+  return (
+    <div className="aw-extra-slot">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => {
+          if (!open && triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            setDropdownPos({ top: rect.bottom + 8, left: rect.left });
+          }
+          setOpen((o) => !o);
+        }}
+        className="aw-extra-slot-chain"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <ChainLogo code={slot.chain} size={16} />
+        <span className="text-[13px] font-semibold tracking-tight">
+          {slot.chain}
+        </span>
+        <ChevronDown
+          className={cn(
+            "w-3 h-3 text-[color:var(--fg-tertiary)] transition-transform",
+            open && "rotate-180"
+          )}
+        />
+      </button>
+
+      <div className="w-px h-5 bg-[#1a1a1a] shrink-0" aria-hidden />
+
+      <div className="flex-1 flex items-center px-3 min-w-0">
+        <input
+          className="flex-1 min-w-0 bg-transparent outline-none mono text-[13px] text-white placeholder:text-[color:var(--fg-tertiary)]"
+          placeholder={info.placeholder}
+          value={slot.address}
+          onChange={(e) => {
+            const val = e.target.value;
+            const detected = detectChain(val);
+            onChange({ address: val, chain: detected ?? slot.chain });
+          }}
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={onRemove}
+        className="aw-extra-slot-remove"
+        aria-label="Remove wallet"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+
+      {open &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            role="listbox"
+            className="aw-fade-in"
+            style={{
+              position: "fixed",
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+              zIndex: 9999,
+              minWidth: 260,
+              padding: 6,
+              backgroundColor: "#111111",
+              border: "1px solid #2a2a2a",
+              borderRadius: 12,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
+            }}
+          >
+            {CHAINS.map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange({ ...slot, chain: c.code });
+                  setOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                  slot.chain === c.code ? "bg-[#151515]" : "hover:bg-[#151515]"
+                )}
+                role="option"
+                aria-selected={slot.chain === c.code}
+              >
+                <ChainLogo code={c.code} size={20} />
+                <span className="text-white text-[13px] font-medium flex-1">
+                  {c.name}
+                </span>
+                <span className="text-[11px] text-[color:var(--fg-tertiary)] mono">
+                  {c.code}
+                </span>
+                {c.beta && <Chip tone="beta">{t("common.beta")}</Chip>}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}
+
+// ─── Wallet tabs (shown above result when 2+ wallets scanned) ─────────────────
+function WalletTabs({
+  scans,
+  activeTab,
+  onTabChange,
+}: {
+  scans: ScanResult[];
+  activeTab: number;
+  onTabChange: (idx: number) => void;
+}) {
+  if (scans.length < 2) return null;
+
+  return (
+    <div className="aw-wallet-tabs">
+      {scans.map((scan, i) => {
+        const addr = scan.address;
+        const truncated =
+          addr.length > 14
+            ? `${addr.slice(0, 6)}...${addr.slice(-4)}`
+            : addr;
+        const { tone } = riskFromScore(scan.score);
+        const dotColor =
+          tone === "safe"
+            ? "#1D9E75"
+            : tone === "medium"
+            ? "#F5A623"
+            : "#E5484D";
+        return (
+          <button
+            key={i}
+            className={cn("aw-wallet-tab", activeTab === i && "active")}
+            onClick={() => onTabChange(i)}
+          >
+            <span
+              className="aw-wallet-tab-dot"
+              style={{ background: dotColor }}
+            />
+            <div className="aw-wallet-tab-inner">
+              <span className="aw-wallet-tab-label">Wallet {i + 1}</span>
+              <span className="aw-wallet-tab-addr mono">{truncated}</span>
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 // ─── Entry view ───────────────────────────────────────────────────────────────
 function EntryView({
-  onScan,
+  onMultiScan,
   errorMsg,
+  isPro,
 }: {
-  onScan: (addr: string, chain: ChainCode) => void;
+  onMultiScan: (slots: WalletSlot[]) => void;
   errorMsg: string | null;
+  isPro: boolean;
 }) {
   const t = useT();
+  const [extraSlots, setExtraSlots] = useState<WalletSlot[]>([]);
+  const maxExtra = isPro ? 4 : 0;
+
+  const addSlot = () => {
+    if (extraSlots.length < maxExtra) {
+      setExtraSlots((prev) => [...prev, { address: "", chain: "ETH" }]);
+    }
+  };
+
+  const removeSlot = (i: number) =>
+    setExtraSlots((prev) => prev.filter((_, idx) => idx !== i));
+
+  const updateSlot = (i: number, s: WalletSlot) =>
+    setExtraSlots((prev) => prev.map((slot, idx) => (idx === i ? s : slot)));
+
   return (
     <>
       <Reveal>
@@ -229,10 +514,51 @@ function EntryView({
       <Reveal delay={220} className="aw-scan-input">
         <WalletInputBar
           size="lg"
-          onSubmit={(a, c) => onScan(a, c)}
+          onSubmit={(a, c) =>
+            onMultiScan([
+              { address: a, chain: c },
+              ...extraSlots.filter((s) => s.address.trim()),
+            ])
+          }
           autoFocus
           ctaLabel={t("common.scan_wallet")}
         />
+
+        {extraSlots.map((slot, i) => (
+          <ExtraSlotRow
+            key={i}
+            slot={slot}
+            onChange={(s) => updateSlot(i, s)}
+            onRemove={() => removeSlot(i)}
+          />
+        ))}
+
+        <div className="aw-add-wallet-wrap">
+          {isPro ? (
+            extraSlots.length < maxExtra ? (
+              <button
+                type="button"
+                className="aw-add-wallet-btn"
+                onClick={addSlot}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Wallet
+              </button>
+            ) : null
+          ) : (
+            <div className="aw-add-wallet-lock-wrap">
+              <button
+                type="button"
+                className="aw-add-wallet-btn aw-add-wallet-btn-locked"
+                disabled
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Wallet
+              </button>
+              <span className="aw-lock-tooltip">Pro / Business only</span>
+            </div>
+          )}
+        </div>
 
         {errorMsg && (
           <div
@@ -263,7 +589,11 @@ function EntryView({
               <button
                 key={c.code}
                 className="aw-example"
-                onClick={() => onScan(EXAMPLE_ADDRESSES[c.code], c.code)}
+                onClick={() =>
+                  onMultiScan([
+                    { address: EXAMPLE_ADDRESSES[c.code], chain: c.code },
+                  ])
+                }
               >
                 <ChainLogo code={c.code} size={14} />
                 <span className="mono">{c.code}</span>
@@ -309,10 +639,12 @@ function EntryView({
 // ─── Scanning view ────────────────────────────────────────────────────────────
 function ScanningView({
   address,
+  walletCount,
   progress,
   stepIdx,
 }: {
   address: string;
+  walletCount: number;
   progress: number;
   stepIdx: number;
 }) {
@@ -323,17 +655,20 @@ function ScanningView({
     t("checker.step_3"),
     t("checker.step_4"),
   ];
+  const addrDisplay =
+    walletCount > 1
+      ? `${walletCount} wallets`
+      : address.length > 28
+      ? `${address.slice(0, 16)}…${address.slice(-10)}`
+      : address;
+
   return (
     <div className="aw-scanning">
       <Eyebrow>{t("checker.scanning")}</Eyebrow>
       <h1 className="aw-hero-title">
         {t("checker.analysing")}
         <br />
-        <span className="mono aw-addr-hero">
-          {address.length > 28
-            ? `${address.slice(0, 16)}…${address.slice(-10)}`
-            : address}
-        </span>
+        <span className="mono aw-addr-hero">{addrDisplay}</span>
       </h1>
 
       <div className="flex items-center gap-5 mt-8">
