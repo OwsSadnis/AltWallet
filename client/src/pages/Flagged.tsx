@@ -211,7 +211,7 @@ function FlaggedInner() {
       <header className="fl-header">
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <h1 className="fl-title">High risk wallets</h1>
+            <h1 className="fl-title" style={{ fontSize: 32 }}>High risk wallets</h1>
             {!isLoading && wallets.length > 0 && (
               <span className="fl-count-pill">
                 <span className="aw-dot-sm" />
