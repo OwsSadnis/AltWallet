@@ -574,7 +574,19 @@ function PlanCard({
         ]
       : ["3 scans / day", "ETH, BTC, SOL, TRX, XRP, SUI", "Basic risk analysis"];
 
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    el.style.transform = `perspective(800px) rotateY(${x * 8}deg) rotateX(${-y * 8}deg) translateY(-2px)`;
+  };
+  const onLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.transform = "";
+  };
+
   return (
+    <div className="aw-tilt" onMouseMove={onMove} onMouseLeave={onLeave} style={{ height: "100%" }}>
     <Card style={{ borderColor: "rgba(29,158,117,0.35)" }}>
       <div
         className="mono font-medium uppercase text-[color:var(--accent)]"
@@ -621,6 +633,7 @@ function PlanCard({
         ))}
       </ul>
     </Card>
+    </div>
   );
 }
 
