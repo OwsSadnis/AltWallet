@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { Search, Download, Pencil, RefreshCw, ArrowRight, FilterX, SearchX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Eyebrow } from "@/components/aw/Primitives";
+import { Reveal } from "@/components/aw/motion";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -409,7 +410,8 @@ export default function History() {
 
   return (
     <div className="container" style={{ paddingTop: 32, paddingBottom: 80 }}>
-      <div className="sh-head">
+      <Reveal>
+        <div className="sh-head">
           <Eyebrow>History</Eyebrow>
           <h1
             className="text-white font-extrabold tracking-tight"
@@ -418,7 +420,9 @@ export default function History() {
             Scan History
           </h1>
         </div>
+      </Reveal>
 
+      <Reveal delay={80}>
         <div className="sh-controls">
           <div className="sh-search">
             <Search />
@@ -445,7 +449,9 @@ export default function History() {
             </select>
           </div>
         </div>
+      </Reveal>
 
+      <Reveal delay={160}>
         <div className="sh-listhead">
           <span className="sh-count">
             {loading ? "Loading…" : `${filtered.length} scan${filtered.length === 1 ? "" : "s"}`}
@@ -454,7 +460,9 @@ export default function History() {
             <Download /> Export CSV
           </button>
         </div>
+      </Reveal>
 
+      <Reveal delay={240}>
         {loading ? (
           <div className="sh-empty">
             <div className="sh-empty-icon" style={{ animation: "sh-spin 1s linear infinite" }}>
@@ -494,6 +502,7 @@ export default function History() {
             <Pagination page={safePage} pages={pages} onPage={setPage} />
           </>
         )}
+      </Reveal>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { RefreshCw, Download, ShieldCheck, Clock, ArrowRight } from "lucide-react";
 import { ProtectedRoute } from "../components/aw/ProtectedRoute";
 import ChainLogo from "../components/aw/ChainLogo";
+import { Reveal } from "@/components/aw/motion";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -208,57 +209,61 @@ function FlaggedInner() {
 
   return (
     <div className="container" style={{ paddingTop: 32, paddingBottom: 80 }}>
-      <header className="fl-header">
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <h1 className="fl-title" style={{ fontSize: 32 }}>High risk wallets</h1>
-            {!isLoading && wallets.length > 0 && (
-              <span className="fl-count-pill">
-                <span className="aw-dot-sm" />
-                {wallets.length} flagged
-              </span>
-            )}
+      <Reveal>
+        <header className="fl-header">
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <h1 className="fl-title" style={{ fontSize: 32 }}>High risk wallets</h1>
+              {!isLoading && wallets.length > 0 && (
+                <span className="fl-count-pill">
+                  <span className="aw-dot-sm" />
+                  {wallets.length} flagged
+                </span>
+              )}
+            </div>
+            <p className="fl-subtitle">
+              Wallets flagged from your scan history with HIGH risk score (0–39).
+            </p>
           </div>
-          <p className="fl-subtitle">
-            Wallets flagged from your scan history with HIGH risk score (0–39).
-          </p>
-        </div>
-        <div className="fl-header-actions">
-          <button
-            className="fl-btn fl-btn-outline"
-            disabled={isExporting || isLoading || !wallets.length}
-            onClick={handleExport}
-          >
-            {isExporting ? (
-              <><span className="fl-export-spinner" />Exporting</>
-            ) : (
-              <><Download style={{ width: 13, height: 13, strokeWidth: 1.85 }} />Export CSV</>
-            )}
-          </button>
-        </div>
-      </header>
+          <div className="fl-header-actions">
+            <button
+              className="fl-btn fl-btn-outline"
+              disabled={isExporting || isLoading || !wallets.length}
+              onClick={handleExport}
+            >
+              {isExporting ? (
+                <><span className="fl-export-spinner" />Exporting</>
+              ) : (
+                <><Download style={{ width: 13, height: 13, strokeWidth: 1.85 }} />Export CSV</>
+              )}
+            </button>
+          </div>
+        </header>
+      </Reveal>
 
-      {isLoading ? (
-        <div className="fl-list">
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </div>
-      ) : wallets.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <div className="fl-list">
-          {wallets.map((w) => (
-            <FlaggedCard
-              key={w.id}
-              wallet={w}
-              rescanning={rescanningId === w.id}
-              onRescan={handleRescan}
-              onViewDetail={handleViewDetail}
-            />
-          ))}
-        </div>
-      )}
+      <Reveal delay={120}>
+        {isLoading ? (
+          <div className="fl-list">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        ) : wallets.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="fl-list">
+            {wallets.map((w) => (
+              <FlaggedCard
+                key={w.id}
+                wallet={w}
+                rescanning={rescanningId === w.id}
+                onRescan={handleRescan}
+                onViewDetail={handleViewDetail}
+              />
+            ))}
+          </div>
+        )}
+      </Reveal>
     </div>
   );
 }

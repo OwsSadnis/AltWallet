@@ -66,7 +66,7 @@ export default function Dashboard() {
   return (
     <div className="container" style={{ paddingTop: 48, paddingBottom: 120 }}>
       {/* Header */}
-      <Reveal>
+      <Reveal delay={0}>
         <div className="flex items-start justify-between gap-6 mb-8 flex-wrap">
           <div>
             <Eyebrow>Dashboard</Eyebrow>
@@ -134,7 +134,7 @@ export default function Dashboard() {
       </Reveal>
 
       {/* Stats grid */}
-      <Reveal>
+      <Reveal delay={80}>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard
             label="Total Scans"
@@ -173,7 +173,7 @@ export default function Dashboard() {
       </Reveal>
 
       {/* Quick scan + Plan card */}
-      <Reveal>
+      <Reveal delay={160}>
         <div
           className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-5 mb-6"
           style={{ alignItems: "start" }}
@@ -184,7 +184,7 @@ export default function Dashboard() {
       </Reveal>
 
       {/* Recent scans */}
-      <Reveal>
+      <Reveal delay={240}>
         <RecentScansSection
           scans={scans}
           loading={scansLoading}
@@ -198,7 +198,7 @@ export default function Dashboard() {
       </Reveal>
 
       {/* Account settings + Chain coverage */}
-      <Reveal>
+      <Reveal delay={320}>
         <div className="grid md:grid-cols-2 gap-5 mt-6">
           <AccountSettingsCard user={user} plan={plan} />
           <ChainCoverageCard />
@@ -206,7 +206,7 @@ export default function Dashboard() {
       </Reveal>
 
       {/* Team seats */}
-      <Reveal>
+      <Reveal delay={400}>
         <div className="mt-6">
           <TeamSeats plan={plan} />
         </div>
