@@ -152,13 +152,14 @@ export default function Dashboard() {
             value={statsLoading ? "—" : String(stats?.total_scans ?? 0)}
             delta={t("dash.stat_this_week", { n: 18 })}
             deltaTone="green"
+            valueColor="#1D9E75"
           />
           <StatCard
             label={t("dash.stat_flagged_wallets")}
             value={statsLoading ? "—" : String(stats?.flagged_count ?? 0)}
             delta={t("dash.stat_since_last", { n: 3 })}
             deltaTone="red"
-            valueColor="#E05555"
+            valueColor="#E5484D"
           />
           <StatCard
             label={t("dash.stat_scans_today")}
@@ -176,7 +177,7 @@ export default function Dashboard() {
             value={statsLoading ? "—" : String(stats?.chains_used.length ?? 0)}
             delta={stats?.chains_used.join(" · ") ?? ""}
             deltaTone="muted"
-            valueColor="rgba(29,158,117,0.8)"
+            valueColor="#E8E8E8"
           />
         </div>
       </Reveal>
