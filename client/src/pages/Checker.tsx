@@ -349,7 +349,7 @@ function ExtraSlotRow({
 
       <div className="flex-1 flex items-center px-3 min-w-0">
         <input
-          className="flex-1 min-w-0 bg-transparent outline-none mono text-[13px] text-white placeholder:text-[color:var(--fg-tertiary)]"
+          className="flex-1 min-w-0 bg-transparent outline-none mono text-[14px] text-white placeholder:text-[color:var(--fg-tertiary)]"
           placeholder={info.placeholder}
           value={slot.address}
           onChange={(e) => {
