@@ -92,6 +92,7 @@ export default function Dashboard() {
                 style={{
                   background: "var(--accent-ghost)",
                   border: "1px solid rgba(29,158,117,0.30)",
+                  alignSelf: "center",
                 }}
               >
                 {plan.toUpperCase()}
