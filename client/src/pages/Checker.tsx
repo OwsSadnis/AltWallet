@@ -589,7 +589,7 @@ function EntryView({
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-8 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-8 items-start">
         <div>
           <Reveal>
             <Eyebrow>{t("checker.eyebrow")}</Eyebrow>
