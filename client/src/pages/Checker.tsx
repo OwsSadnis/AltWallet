@@ -613,11 +613,7 @@ function EntryView({
             <div className="aw-stat-num">47</div>
             <div className="aw-stat-lbl">{t("stats.signals")}</div>
           </div>
-          <div className="aw-stat">
-            <div className="aw-stat-num">1.2B+</div>
-            <div className="aw-stat-lbl">{t("stats.indexed")}</div>
-          </div>
-          <div className="aw-stat">
+<div className="aw-stat">
             <div className="aw-stat-num">&lt;4s</div>
             <div className="aw-stat-lbl">{t("stats.median")}</div>
           </div>
