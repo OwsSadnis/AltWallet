@@ -469,6 +469,98 @@ function WalletTabs({
   );
 }
 
+// ─── Sample scan card (hero right column) ────────────────────────────────────
+function SampleScanCard({ onScan }: { onScan: (slots: WalletSlot[]) => void }) {
+  const [hoveredChain, setHoveredChain] = useState<ChainCode | null>(null);
+
+  return (
+    <div
+      style={{
+        background: "var(--bg-elevated)",
+        border: "1px solid var(--border-default)",
+        borderRadius: "var(--radius-lg)",
+        padding: "20px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          color: "var(--fg-tertiary)",
+          marginBottom: 6,
+        }}
+      >
+        TRY A SAMPLE SCAN
+      </div>
+      <div
+        style={{
+          fontSize: 12,
+          color: "var(--fg-secondary)",
+          marginBottom: 14,
+        }}
+      >
+        Click a chain to see what a result looks like.
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 6,
+        }}
+      >
+        {CHAINS.map((c) => (
+          <button
+            key={c.code}
+            type="button"
+            onClick={() =>
+              onScan([{ address: EXAMPLE_ADDRESSES[c.code], chain: c.code }])
+            }
+            onMouseEnter={() => setHoveredChain(c.code)}
+            onMouseLeave={() => setHoveredChain(null)}
+            style={{
+              background:
+                hoveredChain === c.code
+                  ? "var(--bg-elevated)"
+                  : "var(--bg-inset)",
+              border: `1px solid ${
+                hoveredChain === c.code
+                  ? "var(--border-strong)"
+                  : "var(--border-default)"
+              }`,
+              borderRadius: "var(--radius-md)",
+              padding: "10px 8px",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              cursor: "pointer",
+              transition: "background 150ms, border-color 150ms",
+            }}
+          >
+            <ChainLogo code={c.code} size={16} />
+            <span style={{ fontSize: 12, color: "var(--fg-primary)" }}>
+              {c.name}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div
+        style={{
+          borderTop: "1px solid var(--border-default)",
+          marginTop: 14,
+          paddingTop: 10,
+          fontSize: 11,
+          color: "var(--fg-tertiary)",
+          lineHeight: 1.5,
+        }}
+      >
+        Results are demo only — scan a real address for actual risk data.
+      </div>
+    </div>
+  );
+}
+
 // ─── Entry view ───────────────────────────────────────────────────────────────
 function EntryView({
   onMultiScan,
@@ -497,111 +589,99 @@ function EntryView({
 
   return (
     <>
-      <Reveal>
-        <Eyebrow>{t("checker.eyebrow")}</Eyebrow>
-      </Reveal>
-      <Reveal delay={80}>
-        <h1 className="aw-hero-title">
-          {t("hero.title_line_1")}
-          <br />
-          {t("hero.title_line_2")}
-        </h1>
-      </Reveal>
-      <Reveal delay={140}>
-        <p className="aw-hero-sub">{t("checker.sub")}</p>
-      </Reveal>
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-8 items-start">
+        <div>
+          <Reveal>
+            <Eyebrow>{t("checker.eyebrow")}</Eyebrow>
+          </Reveal>
+          <Reveal delay={80}>
+            <h1 className="aw-hero-title">
+              {t("hero.title_line_1")}
+              <br />
+              {t("hero.title_line_2")}
+            </h1>
+          </Reveal>
+          <Reveal delay={140}>
+            <p className="aw-hero-sub">{t("checker.sub")}</p>
+          </Reveal>
 
-      <Reveal delay={220} className="aw-scan-input">
-        <WalletInputBar
-          size="lg"
-          onSubmit={(a, c) =>
-            onMultiScan([
-              { address: a, chain: c },
-              ...extraSlots.filter((s) => s.address.trim()),
-            ])
-          }
-          autoFocus
-          ctaLabel={t("common.scan_wallet")}
-        />
+          <Reveal delay={220} className="aw-scan-input">
+            <WalletInputBar
+              size="lg"
+              onSubmit={(a, c) =>
+                onMultiScan([
+                  { address: a, chain: c },
+                  ...extraSlots.filter((s) => s.address.trim()),
+                ])
+              }
+              autoFocus
+              ctaLabel={t("common.scan_wallet")}
+            />
 
-        {extraSlots.map((slot, i) => (
-          <ExtraSlotRow
-            key={i}
-            slot={slot}
-            onChange={(s) => updateSlot(i, s)}
-            onRemove={() => removeSlot(i)}
-          />
-        ))}
-
-        <div className="aw-add-wallet-wrap">
-          {isPro ? (
-            extraSlots.length < maxExtra ? (
-              <button
-                type="button"
-                className="aw-add-wallet-btn"
-                onClick={addSlot}
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add Wallet
-              </button>
-            ) : null
-          ) : (
-            <div className="aw-add-wallet-lock-wrap">
-              <button
-                type="button"
-                className="aw-add-wallet-btn aw-add-wallet-btn-locked"
-                disabled
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add Wallet
-              </button>
-              <span className="aw-lock-tooltip">Pro / Business only</span>
-            </div>
-          )}
-        </div>
-
-        {errorMsg && (
-          <div
-            className="mt-3 text-[13px] px-4 py-3 rounded-xl"
-            style={{
-              background: "rgba(229,62,62,0.08)",
-              color: "var(--risk-high)",
-              border: "1px solid rgba(229,62,62,0.2)",
-            }}
-          >
-            {errorMsg}
-            {errorMsg.includes("limit") || errorMsg.includes("chain") ? (
-              <a
-                href="/pricing"
-                className="ml-2 underline"
-                style={{ color: "var(--accent)" }}
-              >
-                Upgrade →
-              </a>
-            ) : null}
-          </div>
-        )}
-
-        <div className="aw-examples-scroll">
-          <span className="aw-examples-label">{t("common.try")}</span>
-          <div className="aw-examples-row">
-            {CHAINS.map((c) => (
-              <button
-                key={c.code}
-                className="aw-example"
-                onClick={() =>
-                  onMultiScan([
-                    { address: EXAMPLE_ADDRESSES[c.code], chain: c.code },
-                  ])
-                }
-              >
-                <ChainLogo code={c.code} size={14} />
-                <span className="mono">{c.code}</span>
-              </button>
+            {extraSlots.map((slot, i) => (
+              <ExtraSlotRow
+                key={i}
+                slot={slot}
+                onChange={(s) => updateSlot(i, s)}
+                onRemove={() => removeSlot(i)}
+              />
             ))}
-          </div>
+
+            <div className="aw-add-wallet-wrap">
+              {isPro ? (
+                extraSlots.length < maxExtra ? (
+                  <button
+                    type="button"
+                    className="aw-add-wallet-btn"
+                    onClick={addSlot}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Wallet
+                  </button>
+                ) : null
+              ) : (
+                <div className="aw-add-wallet-lock-wrap">
+                  <button
+                    type="button"
+                    className="aw-add-wallet-btn aw-add-wallet-btn-locked"
+                    disabled
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Wallet
+                  </button>
+                  <span className="aw-lock-tooltip">Pro / Business only</span>
+                </div>
+              )}
+            </div>
+
+            {errorMsg && (
+              <div
+                className="mt-3 text-[13px] px-4 py-3 rounded-xl"
+                style={{
+                  background: "rgba(229,62,62,0.08)",
+                  color: "var(--risk-high)",
+                  border: "1px solid rgba(229,62,62,0.2)",
+                }}
+              >
+                {errorMsg}
+                {errorMsg.includes("limit") || errorMsg.includes("chain") ? (
+                  <a
+                    href="/pricing"
+                    className="ml-2 underline"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    Upgrade →
+                  </a>
+                ) : null}
+              </div>
+            )}
+          </Reveal>
         </div>
-      </Reveal>
+
+        <Reveal delay={160}>
+          <SampleScanCard onScan={onMultiScan} />
+        </Reveal>
+      </div>
 
       <Reveal delay={320}>
         <div className="aw-scan-stats">
@@ -613,7 +693,7 @@ function EntryView({
             <div className="aw-stat-num">47</div>
             <div className="aw-stat-lbl">{t("stats.signals")}</div>
           </div>
-<div className="aw-stat">
+          <div className="aw-stat">
             <div className="aw-stat-num">&lt;4s</div>
             <div className="aw-stat-lbl">{t("stats.median")}</div>
           </div>
