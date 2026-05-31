@@ -76,19 +76,6 @@ export default function Landing() {
         />
         <div className="container relative">
           <div className="flex flex-col items-start gap-5 max-w-3xl">
-            <Reveal delay={0}>
-              <div
-                className="inline-flex items-center gap-2.5 rounded-full border px-3 py-1.5 text-[11px] text-[color:var(--fg-secondary)] uppercase tracking-[0.14em]"
-                style={{
-                  borderColor: "#1a1a1a",
-                  background: "rgba(17,17,17,0.6)",
-                }}
-              >
-                <PulseDot />
-                <span>{t("hero.trusted")}</span>
-              </div>
-            </Reveal>
-
             <Reveal delay={80}>
               <h1 className="aw-hero-title">
                 {t("hero.title_line_1")}
@@ -140,13 +127,7 @@ export default function Landing() {
                   </div>
                   <div className="aw-stat-lbl">{t("stats.signals")}</div>
                 </div>
-                <div className="aw-stat">
-                  <div className="aw-stat-num">
-                    1.2B<span className="text-[color:var(--fg-tertiary)]">+</span>
-                  </div>
-                  <div className="aw-stat-lbl">{t("stats.indexed")}</div>
-                </div>
-                <div className="aw-stat">
+<div className="aw-stat">
                   <div className="aw-stat-num">&lt;4s</div>
                   <div className="aw-stat-lbl">{t("stats.median")}</div>
                 </div>
