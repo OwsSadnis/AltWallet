@@ -218,13 +218,23 @@ export default function Checker() {
   const isPro = userPlan === "pro" || userPlan === "business";
 
   return (
-    <div className="container aw-scan aw-page-bg">
+    <div className="container aw-scan aw-page-bg" style={{ position: "relative" }}>
       {stage === "entry" && (
-        <EntryView
-          onMultiScan={startMultiScan}
-          errorMsg={scanError}
-          isPro={isPro}
-        />
+        <>
+          <div
+            className="hidden md:block"
+            style={{ position: "absolute", top: 0, right: 0, width: 260, zIndex: 10 }}
+          >
+            <Reveal delay={160}>
+              <SampleScanCard onScan={startMultiScan} />
+            </Reveal>
+          </div>
+          <EntryView
+            onMultiScan={startMultiScan}
+            errorMsg={scanError}
+            isPro={isPro}
+          />
+        </>
       )}
       {stage === "scanning" && (
         <ScanningView
@@ -589,99 +599,91 @@ function EntryView({
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-8 items-start">
-        <div>
-          <Reveal>
-            <Eyebrow>{t("checker.eyebrow")}</Eyebrow>
-          </Reveal>
-          <Reveal delay={80}>
-            <h1 className="aw-hero-title">
-              {t("hero.title_line_1")}
-              <br />
-              {t("hero.title_line_2")}
-            </h1>
-          </Reveal>
-          <Reveal delay={140}>
-            <p className="aw-hero-sub">{t("checker.sub")}</p>
-          </Reveal>
+      <Reveal>
+        <Eyebrow>{t("checker.eyebrow")}</Eyebrow>
+      </Reveal>
+      <Reveal delay={80}>
+        <h1 className="aw-hero-title">
+          {t("hero.title_line_1")}
+          <br />
+          {t("hero.title_line_2")}
+        </h1>
+      </Reveal>
+      <Reveal delay={140}>
+        <p className="aw-hero-sub">{t("checker.sub")}</p>
+      </Reveal>
 
-          <Reveal delay={220} className="aw-scan-input">
-            <WalletInputBar
-              size="lg"
-              onSubmit={(a, c) =>
-                onMultiScan([
-                  { address: a, chain: c },
-                  ...extraSlots.filter((s) => s.address.trim()),
-                ])
-              }
-              autoFocus
-              ctaLabel={t("common.scan_wallet")}
-            />
+      <Reveal delay={220} className="aw-scan-input">
+        <WalletInputBar
+          size="lg"
+          onSubmit={(a, c) =>
+            onMultiScan([
+              { address: a, chain: c },
+              ...extraSlots.filter((s) => s.address.trim()),
+            ])
+          }
+          autoFocus
+          ctaLabel={t("common.scan_wallet")}
+        />
 
-            {extraSlots.map((slot, i) => (
-              <ExtraSlotRow
-                key={i}
-                slot={slot}
-                onChange={(s) => updateSlot(i, s)}
-                onRemove={() => removeSlot(i)}
-              />
-            ))}
+        {extraSlots.map((slot, i) => (
+          <ExtraSlotRow
+            key={i}
+            slot={slot}
+            onChange={(s) => updateSlot(i, s)}
+            onRemove={() => removeSlot(i)}
+          />
+        ))}
 
-            <div className="aw-add-wallet-wrap">
-              {isPro ? (
-                extraSlots.length < maxExtra ? (
-                  <button
-                    type="button"
-                    className="aw-add-wallet-btn"
-                    onClick={addSlot}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add Wallet
-                  </button>
-                ) : null
-              ) : (
-                <div className="aw-add-wallet-lock-wrap">
-                  <button
-                    type="button"
-                    className="aw-add-wallet-btn aw-add-wallet-btn-locked"
-                    disabled
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add Wallet
-                  </button>
-                  <span className="aw-lock-tooltip">Pro / Business only</span>
-                </div>
-              )}
-            </div>
-
-            {errorMsg && (
-              <div
-                className="mt-3 text-[13px] px-4 py-3 rounded-xl"
-                style={{
-                  background: "rgba(229,62,62,0.08)",
-                  color: "var(--risk-high)",
-                  border: "1px solid rgba(229,62,62,0.2)",
-                }}
+        <div className="aw-add-wallet-wrap">
+          {isPro ? (
+            extraSlots.length < maxExtra ? (
+              <button
+                type="button"
+                className="aw-add-wallet-btn"
+                onClick={addSlot}
               >
-                {errorMsg}
-                {errorMsg.includes("limit") || errorMsg.includes("chain") ? (
-                  <a
-                    href="/pricing"
-                    className="ml-2 underline"
-                    style={{ color: "var(--accent)" }}
-                  >
-                    Upgrade →
-                  </a>
-                ) : null}
-              </div>
-            )}
-          </Reveal>
+                <Plus className="w-3.5 h-3.5" />
+                Add Wallet
+              </button>
+            ) : null
+          ) : (
+            <div className="aw-add-wallet-lock-wrap">
+              <button
+                type="button"
+                className="aw-add-wallet-btn aw-add-wallet-btn-locked"
+                disabled
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Wallet
+              </button>
+              <span className="aw-lock-tooltip">Pro / Business only</span>
+            </div>
+          )}
         </div>
 
-        <Reveal delay={160}>
-          <SampleScanCard onScan={onMultiScan} />
-        </Reveal>
-      </div>
+        {errorMsg && (
+          <div
+            className="mt-3 text-[13px] px-4 py-3 rounded-xl"
+            style={{
+              background: "rgba(229,62,62,0.08)",
+              color: "var(--risk-high)",
+              border: "1px solid rgba(229,62,62,0.2)",
+            }}
+          >
+            {errorMsg}
+            {errorMsg.includes("limit") || errorMsg.includes("chain") ? (
+              <a
+                href="/pricing"
+                className="ml-2 underline"
+                style={{ color: "var(--accent)" }}
+              >
+                Upgrade →
+              </a>
+            ) : null}
+          </div>
+        )}
+      </Reveal>
 
       <Reveal delay={320}>
         <div className="aw-scan-stats">
