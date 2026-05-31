@@ -2447,7 +2447,7 @@ html[dir="rtl"] .aw-drawer-link:hover { padding-left: 4px; padding-right: 10px; 
   align-items: center;
   justify-content: center;
   margin-right: 6px;
-  border-radius: 7px;
+  border-radius: 50%;
   background: transparent;
   border: none;
   color: var(--fg-tertiary);
