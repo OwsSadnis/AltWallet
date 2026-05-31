@@ -23,6 +23,7 @@ export function Navbar() {
   const LINKS = [
     { label: t("nav.checker"), href: "/checker" },
     { label: t("nav.history"), href: "/history" },
+    { label: "Flagged", href: "/flagged", signedIn: true },
     { label: t("nav.pricing"), href: "/pricing" },
     { label: t("nav.redeem"), href: "/redeem" },
   ];
@@ -81,15 +82,17 @@ export function Navbar() {
                   Dashboard
                 </Link>
               )}
-              {LINKS.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className={cn("aw-nav-link", isActive(l.href) && "active")}
-                >
-                  {l.label}
-                </Link>
-              ))}
+              {LINKS.map((l) =>
+                (!l.signedIn || isSignedIn) && (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className={cn("aw-nav-link", isActive(l.href) && "active")}
+                  >
+                    {l.label}
+                  </Link>
+                )
+              )}
               {isAdmin && (
                 <Link
                   href="/admin"
@@ -194,20 +197,22 @@ export function Navbar() {
                   <ArrowRight className="w-4 h-4 opacity-50" />
                 </Link>
               )}
-              {LINKS.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className={cn(
-                    "aw-drawer-link",
-                    isActive(l.href) && "text-white"
-                  )}
-                  onClick={() => setDrawerOpen(false)}
-                >
-                  {l.label}
-                  <ArrowRight className="w-4 h-4 opacity-50" />
-                </Link>
-              ))}
+              {LINKS.map((l) =>
+                (!l.signedIn || isSignedIn) && (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className={cn(
+                      "aw-drawer-link",
+                      isActive(l.href) && "text-white"
+                    )}
+                    onClick={() => setDrawerOpen(false)}
+                  >
+                    {l.label}
+                    <ArrowRight className="w-4 h-4 opacity-50" />
+                  </Link>
+                )
+              )}
               {isAdmin && (
                 <Link
                   href="/admin"
