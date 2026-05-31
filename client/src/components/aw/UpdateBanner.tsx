@@ -17,7 +17,7 @@ export function UpdateBanner() {
   return (
     <div className="aw-update-banner">
       <span className="aw-update-banner-text">
-        Updates were recently added — click to refresh. Your scan results are saved in History for Pro & Business users.
+        Updates were recently added — click to refresh. Your scan results are saved in History.
       </span>
       <div className="aw-update-banner-actions">
         <button
