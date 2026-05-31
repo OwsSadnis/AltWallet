@@ -219,7 +219,18 @@ function FlaggedInner() {
           <div>
             <Eyebrow>{t("flagged.eyebrow")}</Eyebrow>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10 }}>
-              <h1 className="fl-title aw-gradient-text" style={{ fontSize: 32 }}>{t("flagged.list_title")}</h1>
+              <h1
+                className="fl-title aw-gradient-text"
+                style={{
+                  fontSize: 32,
+                  background: "linear-gradient(180deg, #FFFFFF 0%, #AAAAAA 130%)",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
+                {t("flagged.list_title")}
+              </h1>
               {!isLoading && wallets.length > 0 && (
                 <span className="fl-count-pill">
                   <span className="aw-dot-sm" />

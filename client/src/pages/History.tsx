@@ -421,7 +421,16 @@ export default function History() {
           <Eyebrow>{t("history.eyebrow")}</Eyebrow>
           <h1
             className="aw-gradient-text tracking-tight"
-            style={{ fontSize: 34, letterSpacing: "-0.04em", lineHeight: 1, fontWeight: 900 }}
+            style={{
+              fontSize: 34,
+              letterSpacing: "-0.04em",
+              lineHeight: 1,
+              fontWeight: 900,
+              background: "linear-gradient(180deg, #FFFFFF 0%, #AAAAAA 130%)",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
           >
             {t("history.title")}
           </h1>

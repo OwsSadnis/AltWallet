@@ -168,13 +168,14 @@ export default function Dashboard() {
             }
             delta={t("dash.stat_remaining", { n: Math.max(0, (stats?.daily_limit ?? (plan === "pro" ? 50 : plan === "business" ? 200 : 3)) - (stats?.scans_today ?? 0)) })}
             deltaTone="green"
-            valueColor="rgba(29,158,117,0.8)"
+            valueColor="#E8E8E8"
           />
           <StatCard
             label={t("dash.stat_chains_used")}
             value={statsLoading ? "—" : String(stats?.chains_used.length ?? 0)}
             delta={stats?.chains_used.join(" · ") ?? ""}
             deltaTone="muted"
+            valueColor="rgba(29,158,117,0.8)"
           />
         </div>
       </Reveal>
@@ -244,7 +245,7 @@ function StatCard({
     <Card>
       <div
         className="mono font-medium uppercase text-[color:var(--fg-tertiary)]"
-        style={{ fontSize: 10.5, letterSpacing: "0.12em", marginBottom: 14 }}
+        style={{ fontSize: 10.5, letterSpacing: "0.12em", marginBottom: 14, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}
       >
         {label}
       </div>
