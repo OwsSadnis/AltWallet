@@ -333,19 +333,19 @@ function ExtraSlotRow({
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <ChainLogo code={slot.chain} size={16} />
+        <ChainLogo code={slot.chain} size={18} />
         <span className="text-[13px] font-semibold tracking-tight">
           {slot.chain}
         </span>
         <ChevronDown
           className={cn(
-            "w-3 h-3 text-[color:var(--fg-tertiary)] transition-transform",
+            "w-3.5 h-3.5 text-[color:var(--fg-tertiary)] transition-transform",
             open && "rotate-180"
           )}
         />
       </button>
 
-      <div className="w-px h-5 bg-[#1a1a1a] shrink-0" aria-hidden />
+      <div className="w-px h-7 bg-[#1a1a1a] shrink-0" aria-hidden />
 
       <div className="flex-1 flex items-center px-3 min-w-0">
         <input
