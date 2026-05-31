@@ -103,13 +103,14 @@ export function Navbar() {
                   {l.label}
                 </Link>
               ))}
-              <Link
-                href="/admin"
-                className={cn("aw-nav-link", isActive("/admin") && "active")}
-                onClick={(e) => handleProtectedNav(e, "/admin")}
-              >
-                {t("nav.admin")}
-              </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className={cn("aw-nav-link", isActive("/admin") && "active")}
+                >
+                  {t("nav.admin")}
+                </Link>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -227,14 +228,16 @@ export function Navbar() {
                   <ArrowRight className="w-4 h-4 opacity-50" />
                 </Link>
               ))}
-              <Link
-                href="/admin"
-                className={cn("aw-drawer-link", isActive("/admin") && "text-white")}
-                onClick={(e) => { handleProtectedNav(e, "/admin"); setDrawerOpen(false); }}
-              >
-                {t("nav.admin")}
-                <ArrowRight className="w-4 h-4 opacity-50" />
-              </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className={cn("aw-drawer-link", isActive("/admin") && "text-white")}
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  {t("nav.admin")}
+                  <ArrowRight className="w-4 h-4 opacity-50" />
+                </Link>
+              )}
             </nav>
 
             <div className="mt-6">
