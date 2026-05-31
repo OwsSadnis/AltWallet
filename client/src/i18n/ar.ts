@@ -90,6 +90,8 @@ export const ar: Record<string, string> = {
 
   "feat.scans_1": "فحص محفظة واحد / اليوم",
   "feat.scans_unlimited": "فحوص غير محدودة",
+  "feat.scans_50": "50 فحصًا / اليوم",
+  "feat.scans_200": "200 فحصًا / اليوم",
   "feat.score_flags": "درجة المخاطر والتنبيهات",
   "feat.history_30": "سجل معاملات 30 يومًا",
   "feat.history_12": "سجل معاملات 12 شهرًا",

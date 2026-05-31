@@ -42,12 +42,12 @@ export function PricingCards() {
       external: true,
       popular: true,
       features: [
-        { key: "feat.scans_unlimited", included: true },
+        { key: "feat.scans_50", included: true },
         { key: "feat.score_flags", included: true },
         { key: "feat.history_12", included: true },
         { key: "feat.ai_summary", included: true },
         { key: "feat.pdf", included: true },
-        { key: "feat.csv", included: false },
+        { key: "feat.csv", included: true },
         { key: "feat.seats_1", included: true },
         { key: "feat.support_email", included: true },
       ] as Feature[],
@@ -60,7 +60,7 @@ export function PricingCards() {
       ctaHref: WHOP_BUSINESS_URL,
       external: true,
       features: [
-        { key: "feat.scans_unlimited", included: true },
+        { key: "feat.scans_200", included: true },
         { key: "feat.score_flags", included: true },
         { key: "feat.history_24", included: true },
         { key: "feat.ai_summary", included: true },

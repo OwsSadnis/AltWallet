@@ -90,6 +90,8 @@ export const id: Record<string, string> = {
 
   "feat.scans_1": "1 scan wallet / hari",
   "feat.scans_unlimited": "Scan tanpa batas",
+  "feat.scans_50": "50 scan / hari",
+  "feat.scans_200": "200 scan / hari",
   "feat.score_flags": "Skor risiko & flag",
   "feat.history_30": "Riwayat transaksi 30 hari",
   "feat.history_12": "Riwayat transaksi 12 bulan",

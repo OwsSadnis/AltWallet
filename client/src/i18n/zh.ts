@@ -90,6 +90,8 @@ export const zh: Record<string, string> = {
 
   "feat.scans_1": "每天 1 次钱包扫描",
   "feat.scans_unlimited": "无限次扫描",
+  "feat.scans_50": "每天 50 次扫描",
+  "feat.scans_200": "每天 200 次扫描",
   "feat.score_flags": "风险评分与警报",
   "feat.history_30": "30 天交易历史",
   "feat.history_12": "12 个月交易历史",

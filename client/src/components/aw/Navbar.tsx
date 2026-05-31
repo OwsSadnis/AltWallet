@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { useI18n, LANGS, LangCode } from "@/i18n";
 
 export function Navbar() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { lang, setLang, t } = useI18n();
   const { isSignedIn } = useAuth();
   const { user } = useUser();
@@ -19,11 +19,23 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [authToast, setAuthToast] = useState(false);
+
+  const handleProtectedNav = (e: { preventDefault(): void }, href: string) => {
+    if (!isSignedIn) {
+      e.preventDefault();
+      setAuthToast(true);
+      setTimeout(() => {
+        setAuthToast(false);
+        navigate("/sign-in?redirect=" + encodeURIComponent(href));
+      }, 900);
+    }
+  };
 
   const LINKS = [
     { label: t("nav.checker"), href: "/checker" },
     { label: t("nav.history"), href: "/history" },
-    { label: t("nav.flagged"), href: "/flagged", signedIn: true },
+    { label: t("nav.flagged"), href: "/flagged", requiresAuth: true },
     { label: t("nav.pricing"), href: "/pricing" },
     { label: t("nav.redeem"), href: "/redeem" },
   ];
@@ -74,33 +86,30 @@ export function Navbar() {
             </Link>
 
             <div className="aw-nav-links hidden md:flex">
-              {isSignedIn && (
+              <Link
+                href="/dashboard"
+                className={cn("aw-nav-link", isActive("/dashboard") && "active")}
+                onClick={(e) => handleProtectedNav(e, "/dashboard")}
+              >
+                {t("nav.dashboard")}
+              </Link>
+              {LINKS.map((l) => (
                 <Link
-                  href="/dashboard"
-                  className={cn("aw-nav-link", isActive("/dashboard") && "active")}
+                  key={l.href}
+                  href={l.href}
+                  className={cn("aw-nav-link", isActive(l.href) && "active")}
+                  onClick={l.requiresAuth ? (e) => handleProtectedNav(e, l.href) : undefined}
                 >
-                  {t("nav.dashboard")}
+                  {l.label}
                 </Link>
-              )}
-              {LINKS.map((l) =>
-                (!l.signedIn || isSignedIn) && (
-                  <Link
-                    key={l.href}
-                    href={l.href}
-                    className={cn("aw-nav-link", isActive(l.href) && "active")}
-                  >
-                    {l.label}
-                  </Link>
-                )
-              )}
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className={cn("aw-nav-link", isActive("/admin") && "active")}
-                >
-                  {t("nav.admin")}
-                </Link>
-              )}
+              ))}
+              <Link
+                href="/admin"
+                className={cn("aw-nav-link", isActive("/admin") && "active")}
+                onClick={(e) => handleProtectedNav(e, "/admin")}
+              >
+                {t("nav.admin")}
+              </Link>
             </div>
 
             <div className="flex items-center gap-2">
@@ -167,6 +176,15 @@ export function Navbar() {
         </div>
       </nav>
 
+      {authToast && (
+        <div
+          className="fixed top-[72px] left-1/2 -translate-x-1/2 z-[200] rounded-xl border px-4 py-3 text-[13px] text-white shadow-xl aw-fade-in whitespace-nowrap"
+          style={{ background: "#1a1a1a", borderColor: "#2a2a2a" }}
+        >
+          Please sign in to access this feature
+        </div>
+      )}
+
       {drawerOpen && (
         <div
           className="aw-drawer"
@@ -187,42 +205,36 @@ export function Navbar() {
             </div>
 
             <nav className="flex flex-col">
-              {isSignedIn && (
+              <Link
+                href="/dashboard"
+                className={cn("aw-drawer-link", isActive("/dashboard") && "text-white")}
+                onClick={(e) => { handleProtectedNav(e, "/dashboard"); setDrawerOpen(false); }}
+              >
+                {t("nav.dashboard")}
+                <ArrowRight className="w-4 h-4 opacity-50" />
+              </Link>
+              {LINKS.map((l) => (
                 <Link
-                  href="/dashboard"
-                  className={cn("aw-drawer-link", isActive("/dashboard") && "text-white")}
-                  onClick={() => setDrawerOpen(false)}
+                  key={l.href}
+                  href={l.href}
+                  className={cn(
+                    "aw-drawer-link",
+                    isActive(l.href) && "text-white"
+                  )}
+                  onClick={(e) => { if (l.requiresAuth) handleProtectedNav(e, l.href); setDrawerOpen(false); }}
                 >
-                  {t("nav.dashboard")}
+                  {l.label}
                   <ArrowRight className="w-4 h-4 opacity-50" />
                 </Link>
-              )}
-              {LINKS.map((l) =>
-                (!l.signedIn || isSignedIn) && (
-                  <Link
-                    key={l.href}
-                    href={l.href}
-                    className={cn(
-                      "aw-drawer-link",
-                      isActive(l.href) && "text-white"
-                    )}
-                    onClick={() => setDrawerOpen(false)}
-                  >
-                    {l.label}
-                    <ArrowRight className="w-4 h-4 opacity-50" />
-                  </Link>
-                )
-              )}
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className={cn("aw-drawer-link", isActive("/admin") && "text-white")}
-                  onClick={() => setDrawerOpen(false)}
-                >
-                  {t("nav.admin")}
-                  <ArrowRight className="w-4 h-4 opacity-50" />
-                </Link>
-              )}
+              ))}
+              <Link
+                href="/admin"
+                className={cn("aw-drawer-link", isActive("/admin") && "text-white")}
+                onClick={(e) => { handleProtectedNav(e, "/admin"); setDrawerOpen(false); }}
+              >
+                {t("nav.admin")}
+                <ArrowRight className="w-4 h-4 opacity-50" />
+              </Link>
             </nav>
 
             <div className="mt-6">

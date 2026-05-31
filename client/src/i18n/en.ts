@@ -99,6 +99,8 @@ export const en: Record<string, string> = {
 
   "feat.scans_1": "3 wallet scans / day",
   "feat.scans_unlimited": "Unlimited scans",
+  "feat.scans_50": "50 scans / day",
+  "feat.scans_200": "200 scans / day",
   "feat.score_flags": "Risk score & flags",
   "feat.history_30": "30 days transaction history",
   "feat.history_12": "12 months transaction history",
