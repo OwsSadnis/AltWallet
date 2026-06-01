@@ -8,7 +8,6 @@ import { useLocation } from "wouter";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import {
   ChainCode,
-  EXAMPLE_ADDRESSES,
   CHAINS,
   CHAIN_MAP,
   ScanResult,
@@ -469,109 +468,6 @@ function WalletTabs({
   );
 }
 
-// ─── Sample scan card (hero right column) ────────────────────────────────────
-function SampleScanCard({ onScan }: { onScan: (slots: WalletSlot[]) => void }) {
-  const [hoveredChain, setHoveredChain] = useState<ChainCode | null>(null);
-
-  return (
-    <div
-      style={{
-        background: "var(--bg-elevated)",
-        border: "1px solid var(--border-default)",
-        borderRadius: "var(--radius-lg)",
-        padding: "20px",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          color: "var(--fg-tertiary)",
-          marginBottom: 6,
-        }}
-      >
-        TRY A SAMPLE SCAN
-      </div>
-      <div
-        style={{
-          fontSize: 12,
-          color: "var(--fg-secondary)",
-          marginBottom: 14,
-        }}
-      >
-        Click a chain to see what a result looks like.
-      </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 6,
-        }}
-      >
-        {CHAINS.map((c) => (
-          <button
-            key={c.code}
-            type="button"
-            onClick={() =>
-              onScan([{ address: EXAMPLE_ADDRESSES[c.code], chain: c.code }])
-            }
-            onMouseEnter={() => setHoveredChain(c.code)}
-            onMouseLeave={() => setHoveredChain(null)}
-            style={{
-              background:
-                hoveredChain === c.code
-                  ? "var(--bg-elevated)"
-                  : "var(--bg-inset)",
-              border: `1px solid ${
-                hoveredChain === c.code
-                  ? "var(--border-strong)"
-                  : "var(--border-default)"
-              }`,
-              borderRadius: "var(--radius-md)",
-              padding: "10px 8px",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              cursor: "pointer",
-              transition: "background 150ms, border-color 150ms",
-            }}
-          >
-            <ChainLogo code={c.code} size={16} />
-            <span style={{ fontSize: 12, color: "var(--fg-primary)" }}>
-              {c.name}
-            </span>
-            {(c.code === "XRP" || c.code === "SUI") && (
-              <span style={{
-                background: "rgba(245,166,35,0.15)",
-                border: "1px solid rgba(245,166,35,0.3)",
-                color: "#F5A623",
-                fontSize: 9,
-                fontWeight: 600,
-                padding: "1px 5px",
-                borderRadius: 4,
-              }}>BETA</span>
-            )}
-          </button>
-        ))}
-      </div>
-      <div
-        style={{
-          borderTop: "1px solid var(--border-default)",
-          marginTop: 14,
-          paddingTop: 10,
-          fontSize: 11,
-          color: "var(--fg-tertiary)",
-          lineHeight: 1.5,
-        }}
-      >
-        Results are demo only — scan a real address for actual risk data.
-      </div>
-    </div>
-  );
-}
-
 // ─── Entry view ───────────────────────────────────────────────────────────────
 function EntryView({
   onMultiScan,
@@ -599,16 +495,7 @@ function EntryView({
     setExtraSlots((prev) => prev.map((slot, idx) => (idx === i ? s : slot)));
 
   return (
-    <div className="md:flex md:items-start md:gap-6" style={{ position: "relative" }}>
-      <div
-        className="hidden md:block"
-        style={{ width: 240, flexShrink: 0, zIndex: 5 }}
-      >
-        <Reveal delay={160}>
-          <SampleScanCard onScan={onMultiScan} />
-        </Reveal>
-      </div>
-      <div style={{ flex: 1 }}>
+    <div>
       <Reveal>
         <Eyebrow>{t("checker.eyebrow")}</Eyebrow>
       </Reveal>
@@ -720,7 +607,6 @@ function EntryView({
           <div>{t("banner.nowallet")}</div>
         </div>
       </Reveal>
-      </div>
     </div>
   );
 }
