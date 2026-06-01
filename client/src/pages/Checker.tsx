@@ -223,7 +223,7 @@ export default function Checker() {
         <>
           <div
             className="hidden md:block"
-            style={{ position: "fixed", top: 70, right: "max(24px, calc((100vw - 1280px) / 2 + 24px))", width: 220, zIndex: 10 }}
+            style={{ position: "fixed", top: 70, right: 8, width: 180, zIndex: 10 }}
           >
             <Reveal delay={160}>
               <SampleScanCard onScan={startMultiScan} />
@@ -552,6 +552,17 @@ function SampleScanCard({ onScan }: { onScan: (slots: WalletSlot[]) => void }) {
             <span style={{ fontSize: 12, color: "var(--fg-primary)" }}>
               {c.name}
             </span>
+            {(c.code === "XRP" || c.code === "SUI") && (
+              <span style={{
+                background: "rgba(245,166,35,0.15)",
+                border: "1px solid rgba(245,166,35,0.3)",
+                color: "#F5A623",
+                fontSize: 9,
+                fontWeight: 600,
+                padding: "1px 5px",
+                borderRadius: 4,
+              }}>BETA</span>
+            )}
           </button>
         ))}
       </div>
