@@ -220,21 +220,23 @@ export default function Checker() {
   return (
     <div className="container aw-scan aw-page-bg" style={{ position: "relative" }}>
       {stage === "entry" && (
-        <>
-          <div
-            className="hidden md:block"
-            style={{ position: "fixed", top: 70, right: 0, width: 160, zIndex: 10 }}
-          >
-            <Reveal delay={160}>
-              <SampleScanCard onScan={startMultiScan} />
-            </Reveal>
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: "32px", alignItems: "start" }}>
           <EntryView
             onMultiScan={startMultiScan}
             errorMsg={scanError}
             isPro={isPro}
           />
-        </>
+          <div
+            className="hidden md:block"
+            style={{ pointerEvents: "none" }}
+          >
+            <Reveal delay={160}>
+              <div style={{ pointerEvents: "auto" }}>
+                <SampleScanCard onScan={startMultiScan} />
+              </div>
+            </Reveal>
+          </div>
+        </div>
       )}
       {stage === "scanning" && (
         <ScanningView
@@ -714,7 +716,7 @@ function EntryView({
       </Reveal>
 
       <Reveal delay={420}>
-        <div className="aw-banner mt-10">
+        <div className="aw-banner mt-10" style={{ position: "relative", zIndex: 999 }}>
           <div className="aw-banner-icon">
             <ShieldCheck className="w-4 h-4" />
           </div>
