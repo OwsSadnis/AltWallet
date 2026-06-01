@@ -1504,7 +1504,7 @@ html[dir="rtl"] .aw-drawer-link:hover { padding-left: 4px; padding-right: 10px; 
   transform: translateX(-50%);
   width: fit-content;
   max-width: 560px;
-  z-index: 100;
+  z-index: 1001;
   pointer-events: auto;
   background: #1a1a1a;
   border: 1px solid #2a2a2a;

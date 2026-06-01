@@ -40,6 +40,7 @@ export function UpdateBanner() {
           className="aw-update-banner-btn"
           onClick={() => {
             localStorage.setItem(DISMISSED_KEY, "true");
+            setNeedRefresh(false);
             updateServiceWorker(true);
           }}
         >
