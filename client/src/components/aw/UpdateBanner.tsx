@@ -1,8 +1,18 @@
+import { useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 
+const DISMISSED_KEY = "aw_update_banner_dismissed";
+
 export function UpdateBanner() {
-  const { needRefresh: [needRefresh, setNeedRefresh], updateServiceWorker } = useRegisterSW({
-    onRegisteredSW(swUrl, r) {
+  const [dismissed, setDismissed] = useState(
+    () => localStorage.getItem(DISMISSED_KEY) === "true"
+  );
+
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegisteredSW(_swUrl, r) {
       if (r) {
         setInterval(async () => {
           if (!(!r.installing && navigator.onLine)) return;
@@ -12,7 +22,13 @@ export function UpdateBanner() {
     },
   });
 
-  if (!needRefresh) return null;
+  if (!needRefresh || dismissed) return null;
+
+  const dismiss = () => {
+    localStorage.setItem(DISMISSED_KEY, "true");
+    setDismissed(true);
+    setNeedRefresh(false);
+  };
 
   return (
     <div className="aw-update-banner">
@@ -22,13 +38,16 @@ export function UpdateBanner() {
       <div className="aw-update-banner-actions">
         <button
           className="aw-update-banner-btn"
-          onClick={() => updateServiceWorker(true)}
+          onClick={() => {
+            localStorage.setItem(DISMISSED_KEY, "true");
+            updateServiceWorker(true);
+          }}
         >
           Refresh ↻
         </button>
         <button
           className="aw-update-banner-dismiss"
-          onClick={() => setNeedRefresh(false)}
+          onClick={dismiss}
           aria-label="Dismiss"
         >
           ×
