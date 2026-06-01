@@ -17,7 +17,7 @@ export function UpdateBanner() {
         setInterval(async () => {
           if (!(!r.installing && navigator.onLine)) return;
           await r.update();
-        }, 30 * 1000);
+        }, 10 * 1000);
       }
     },
   });
