@@ -220,7 +220,7 @@ export default function Checker() {
   return (
     <div className="container aw-scan aw-page-bg" style={{ position: "relative" }}>
       {stage === "entry" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: "32px", alignItems: "start" }}>
+        <>
           <EntryView
             onMultiScan={startMultiScan}
             errorMsg={scanError}
@@ -228,7 +228,7 @@ export default function Checker() {
           />
           <div
             className="hidden md:block"
-            style={{ pointerEvents: "none" }}
+            style={{ position: "fixed", top: 70, right: 0, width: 160, zIndex: 10, pointerEvents: "none" }}
           >
             <Reveal delay={160}>
               <div style={{ pointerEvents: "auto" }}>
@@ -236,7 +236,7 @@ export default function Checker() {
               </div>
             </Reveal>
           </div>
-        </div>
+        </>
       )}
       {stage === "scanning" && (
         <ScanningView
