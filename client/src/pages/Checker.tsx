@@ -220,23 +220,11 @@ export default function Checker() {
   return (
     <div className="container aw-scan aw-page-bg" style={{ position: "relative" }}>
       {stage === "entry" && (
-        <>
-          <EntryView
-            onMultiScan={startMultiScan}
-            errorMsg={scanError}
-            isPro={isPro}
-          />
-          <div
-            className="hidden md:block"
-            style={{ position: "fixed", top: 70, right: 0, width: 160, zIndex: 10, pointerEvents: "none" }}
-          >
-            <Reveal delay={160}>
-              <div style={{ pointerEvents: "auto" }}>
-                <SampleScanCard onScan={startMultiScan} />
-              </div>
-            </Reveal>
-          </div>
-        </>
+        <EntryView
+          onMultiScan={startMultiScan}
+          errorMsg={scanError}
+          isPro={isPro}
+        />
       )}
       {stage === "scanning" && (
         <ScanningView
@@ -611,7 +599,15 @@ function EntryView({
     setExtraSlots((prev) => prev.map((slot, idx) => (idx === i ? s : slot)));
 
   return (
-    <>
+    <div style={{ position: "relative" }}>
+      <div
+        className="hidden md:block"
+        style={{ position: "absolute", top: 0, right: 0, width: 240, zIndex: 5 }}
+      >
+        <Reveal delay={160}>
+          <SampleScanCard onScan={onMultiScan} />
+        </Reveal>
+      </div>
       <Reveal>
         <Eyebrow>{t("checker.eyebrow")}</Eyebrow>
       </Reveal>
@@ -723,7 +719,7 @@ function EntryView({
           <div>{t("banner.nowallet")}</div>
         </div>
       </Reveal>
-    </>
+    </div>
   );
 }
 
