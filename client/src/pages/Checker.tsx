@@ -599,15 +599,16 @@ function EntryView({
     setExtraSlots((prev) => prev.map((slot, idx) => (idx === i ? s : slot)));
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="md:flex md:items-start md:gap-6" style={{ position: "relative" }}>
       <div
         className="hidden md:block"
-        style={{ position: "absolute", top: 0, right: 0, width: 240, zIndex: 5 }}
+        style={{ width: 240, flexShrink: 0, zIndex: 5 }}
       >
         <Reveal delay={160}>
           <SampleScanCard onScan={onMultiScan} />
         </Reveal>
       </div>
+      <div style={{ flex: 1 }}>
       <Reveal>
         <Eyebrow>{t("checker.eyebrow")}</Eyebrow>
       </Reveal>
@@ -719,6 +720,7 @@ function EntryView({
           <div>{t("banner.nowallet")}</div>
         </div>
       </Reveal>
+      </div>
     </div>
   );
 }
